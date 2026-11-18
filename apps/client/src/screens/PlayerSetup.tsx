@@ -1,28 +1,48 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PLAYER_COLORS, type PlayerColor, type PlayerConfig } from '@island/engine';
+import { AI_LEVELS, PLAYER_COLORS, type AILevel, type PlayerColor, type PlayerConfig } from '@island/engine';
 import { PLAYER_PALETTE } from '../lib/colors';
 import { playSound } from '../lib/sound';
-import { useGameStore } from '../store/useGameStore';
+import { useGameStore, type GameMode } from '../store/useGameStore';
 import { Avatar, AVATAR_COUNT } from '../ui/Avatar';
 import { BackIcon, PlayIcon } from '../ui/icons';
 
 const DEFAULT_NAMES = ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
+/** Names for computer settlers (seat 0 is normally the human). */
+const AI_NAMES = ['Ottilie', 'Maren', 'Tobin', 'Sela'];
 
-export function defaultPlayers(count: number): PlayerConfig[] {
-  return Array.from({ length: count }, (_, i) => ({
-    name: DEFAULT_NAMES[i],
-    color: PLAYER_COLORS[i],
-    avatar: i,
-    isAI: false,
-  }));
+const LEVEL_LABEL: Record<AILevel, string> = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
+
+/** Starting seats: all humans for pass-and-play; you plus computer opponents for single player. */
+export function defaultPlayers(count: number, mode: GameMode | null = 'local'): PlayerConfig[] {
+  return Array.from({ length: count }, (_, i) => {
+    const ai = mode === 'single' && i > 0;
+    return {
+      name: ai ? AI_NAMES[i] : mode === 'single' ? 'You' : DEFAULT_NAMES[i],
+      color: PLAYER_COLORS[i],
+      avatar: i,
+      isAI: ai,
+      ...(ai ? { aiLevel: 'normal' as AILevel } : {}),
+    };
+  });
 }
 
 export function PlayerSetup() {
   const setScreen = useGameStore((s) => s.setScreen);
   const startGame = useGameStore((s) => s.startGame);
   const pushToast = useGameStore((s) => s.pushToast);
-  const [players, setPlayers] = useState<PlayerConfig[]>(defaultPlayers(4));
+  const mode = useGameStore((s) => s.mode);
+  const [players, setPlayers] = useState<PlayerConfig[]>(() => defaultPlayers(4, mode));
+  const noHuman = players.every((p) => p.isAI);
+
+  const toggleAI = (i: number) =>
+    setPlayers((ps) =>
+      ps.map((p, j) => {
+        if (j !== i) return p;
+        if (p.isAI) return { ...p, isAI: false, aiLevel: undefined, name: DEFAULT_NAMES[i] };
+        return { ...p, isAI: true, aiLevel: 'normal', name: AI_NAMES[i] };
+      }),
+    );
   const [seedText, setSeedText] = useState('');
 
   const update = (i: number, patch: Partial<PlayerConfig>) =>
@@ -37,9 +57,13 @@ export function PlayerSetup() {
   };
 
   const setCount = (n: number) =>
-    setPlayers((ps) => (n < ps.length ? ps.slice(0, n) : [...ps, ...defaultPlayers(4).slice(ps.length, n).map((p) => ({ ...p, color: PLAYER_COLORS.find((c) => !ps.some((q) => q.color === c))! }))]));
+    setPlayers((ps) => (n < ps.length ? ps.slice(0, n) : [...ps, ...defaultPlayers(4, mode).slice(ps.length, n).map((p) => ({ ...p, color: PLAYER_COLORS.find((c) => !ps.some((q) => q.color === c))! }))]));
 
   const start = () => {
+    if (noHuman) {
+      pushToast('At least one seat must be a human player', 'error');
+      return;
+    }
     const seed = seedText.trim() === '' ? undefined : Number(seedText);
     if (seed !== undefined && (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff)) {
       pushToast('Island code must be a whole number between 0 and 4294967295', 'error');
@@ -100,6 +124,29 @@ export function PlayerSetup() {
                   className="min-w-0 flex-1 rounded-lg border border-white/15 bg-black/30 px-3 py-2 font-display text-lg text-parchment-50 outline-none focus:border-gold-400"
                   aria-label={`Player ${i + 1} name`}
                 />
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => toggleAI(i)}
+                    title={p.isAI ? 'Computer player — click to make this seat human' : 'Human player — click to make this seat a computer'}
+                    className={`rounded-lg border px-2.5 py-1.5 font-display text-sm transition ${p.isAI ? 'border-sky-300/60 bg-sky-900/50 text-sky-100' : 'border-white/20 bg-black/30 text-parchment-100'} hover:border-gold-400`}
+                  >
+                    {p.isAI ? 'Computer' : 'Human'}
+                  </button>
+                  {p.isAI && (
+                    <select
+                      value={p.aiLevel ?? 'normal'}
+                      onChange={(e) => update(i, { aiLevel: e.target.value as AILevel })}
+                      aria-label={`${p.name} difficulty`}
+                      className="rounded-lg border border-white/20 bg-black/40 px-2 py-1.5 font-display text-sm text-parchment-50 outline-none focus:border-gold-400"
+                    >
+                      {AI_LEVELS.map((l) => (
+                        <option key={l} value={l} className="bg-wood-900">
+                          {LEVEL_LABEL[l]}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
                 <div className="flex gap-1.5">
                   {PLAYER_COLORS.map((c) => (
                     <button
@@ -131,7 +178,7 @@ export function PlayerSetup() {
             <button className="btn-wood" onClick={() => setScreen('mode')}>
               <BackIcon width={18} height={18} /> Back
             </button>
-            <button className="btn-primary" onClick={start} disabled={players.some((p) => !p.name.trim())}>
+            <button className="btn-primary" onClick={start} disabled={noHuman || players.some((p) => !p.name.trim())}>
               <PlayIcon width={18} height={18} /> Start game
             </button>
           </div>

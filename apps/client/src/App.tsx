@@ -10,6 +10,7 @@ import { SettingsModal, Toasts } from './ui/Overlays';
 /**
  * Dev/testing shortcut: `?quick=4&seed=123&auto=6` starts a local game immediately
  * and performs `auto` random legal setup placements through the normal engine path.
+ * `&ai=3` makes the last 3 seats computer players (`ai=4` watches computers play each other).
  */
 let quickStarted = false;
 
@@ -20,9 +21,14 @@ function useQuickStart() {
     if (!quick || quickStarted) return;
     quickStarted = true;
     const store = useGameStore.getState();
-    store.setMode('local');
+    const count = quick === '3' ? 3 : 4;
+    const ai = Math.max(0, Math.min(count, Number(params.get('ai') ?? 0)));
+    store.setMode(ai > 0 ? 'single' : 'local');
     const seed = params.get('seed');
-    store.startGame(defaultPlayers(quick === '3' ? 3 : 4), seed ? Number(seed) : undefined);
+    const players = defaultPlayers(count, 'local').map((p, i) =>
+      i >= count - ai ? { ...p, name: `Computer ${i + 1}`, isAI: true, aiLevel: (params.get('level') as 'easy' | 'normal' | 'hard' | null) ?? 'normal' } : p,
+    );
+    store.startGame(players, seed ? Number(seed) : undefined);
     const auto = Math.min(16, Number(params.get('auto') ?? 0));
     // deterministic picks when a seed is given, so test runs are reproducible
     let r = (Number(seed ?? Date.now()) * 2654435761) >>> 0 || 1;

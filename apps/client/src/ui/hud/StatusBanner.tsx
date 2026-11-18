@@ -13,6 +13,15 @@ const BUILD_PROMPT: Record<BuildMode, { title: string; detail: string }> = {
 function promptFor(game: GameState, buildMode: BuildMode | null, rolling: boolean): { title: string; detail: string } {
   const p = game.players[game.currentPlayer];
   if (rolling) return { title: 'The dice are rolling…', detail: '' };
+  if (p.isAI && game.phase !== 'gameOver') {
+    const waiting =
+      game.phase === 'discard'
+        ? 'Waiting for discards.'
+        : game.tradeOffer
+          ? 'Waiting for answers to their trade offer.'
+          : 'Watch the board and the chronicle to follow their moves.';
+    return { title: `${p.name} is taking their turn…`, detail: waiting };
+  }
   switch (game.phase) {
     case 'setup': {
       const round = game.setup!.index < game.players.length ? 'first' : 'second';

@@ -23,6 +23,8 @@ export interface Settings {
   autoRotateMenu: boolean;
   /** Pass-and-play: cover the screen between turns so hands stay private. */
   handoff: boolean;
+  /** Shorter pauses between computer players' actions. */
+  fastAI: boolean;
 }
 
 export interface Toast {
@@ -105,6 +107,7 @@ const DEFAULT_SETTINGS: Settings = {
   revealHands: true,
   autoRotateMenu: true,
   handoff: true,
+  fastAI: false,
 };
 
 function load<T>(key: string): T | null {
@@ -184,19 +187,25 @@ export const useGameStore = create<StoreState>((set, get) => {
           get().pushToast('Setup complete! Roll the dice to begin.', 'success');
           break;
         case 'turnEnded':
-          if (settings.handoff && mode === 'local' && !next.players[e.next].isAI) set({ handoffFor: e.next });
+          if (settings.handoff && next.players.filter((p) => !p.isAI).length > 1 && !next.players[e.next].isAI) set({ handoffFor: e.next });
           else window.setTimeout(() => playSound('turn'), 200);
           break;
         case 'devCardBought':
           playSound('collect');
-          set((st) => ({ revealCard: { seq: (st.revealCard?.seq ?? 0) + 1, card: e.card } }));
+          // only reveal a card to a human buyer — a computer player's cards stay hidden
+          if (!next.players[e.player].isAI) set((st) => ({ revealCard: { seq: (st.revealCard?.seq ?? 0) + 1, card: e.card } }));
+          else get().pushToast(next.players[e.player].name + ' bought a development card.', 'info');
           break;
         case 'devCardPlayed':
           playSound('place');
           break;
         case 'maritimeTrade':
+          playSound('collect');
+          if (next.players[e.player].isAI) get().pushToast(next.players[e.player].name + ' traded ' + e.gave + ' ' + e.give + ' with the bank for ' + e.received + ' ' + e.receive + '.', 'info');
+          break;
         case 'tradeCompleted':
           playSound('collect');
+          if (next.players[e.from].isAI || next.players[e.to].isAI) get().pushToast(next.players[e.from].name + ' traded with ' + next.players[e.to].name + '.', 'info');
           break;
         case 'monopoly': {
           const total = e.taken.reduce((a, b) => a + b, 0);

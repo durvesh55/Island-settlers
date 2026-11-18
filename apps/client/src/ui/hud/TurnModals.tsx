@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  canAfford,
   publicVictoryPoints,
   RESOURCES,
   totalCards,
@@ -90,6 +91,60 @@ function DiscardDialog({ game, player, required }: { game: GameState; player: nu
         </span>
         <button className="btn-primary" disabled={chosen !== required} onClick={() => dispatch({ type: 'DISCARD', player, resources: pick })}>
           Discard
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ───────────── Offer from a computer player ───────────── */
+
+function BundleChips({ b }: { b: Record<Resource, number> }) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-2">
+      {RESOURCES.filter((r) => b[r] > 0).map((r) => (
+        <span key={r} className="inline-flex items-center gap-1 font-display text-lg">
+          {b[r]}
+          <ResourceIcon resource={r} className="h-7 w-7" />
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function IncomingOffer({ game, player }: { game: GameState; player: number }) {
+  const dispatch = useGameStore((s) => s.dispatch);
+  const offer = game.tradeOffer!;
+  const from = game.players[offer.from];
+  const me = game.players[player];
+  const pal = PLAYER_PALETTE[from.color];
+  const able = canAfford(me.resources, offer.want);
+  return (
+    <motion.div {...card} className="panel-wood w-full max-w-md p-5 text-parchment-100" style={{ borderColor: pal.accent }}>
+      <div className="flex items-center gap-3">
+        <Avatar index={from.avatar} ring={pal.accent} size={52} />
+        <div>
+          <h2 className="font-display text-2xl text-parchment-50">{from.name} offers a trade</h2>
+          <p className="text-sm text-parchment-300/80">{me.name}, will you accept?</p>
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-lg bg-black/25 p-3">
+          <div className="mb-1 text-xs text-parchment-300/75">You receive</div>
+          <BundleChips b={offer.give} />
+        </div>
+        <div className="rounded-lg bg-black/25 p-3">
+          <div className="mb-1 text-xs text-parchment-300/75">You give</div>
+          <BundleChips b={offer.want} />
+        </div>
+      </div>
+      {!able && <p className="mt-2 text-sm text-red-300">You don't have the cards they asked for.</p>}
+      <div className="mt-4 flex justify-end gap-3">
+        <button className="btn-wood" onClick={() => dispatch({ type: 'RESPOND_TRADE', player, accept: false })}>
+          Decline
+        </button>
+        <button className="btn-primary" disabled={!able} onClick={() => dispatch({ type: 'RESPOND_TRADE', player, accept: true })}>
+          Accept
         </button>
       </div>
     </motion.div>
@@ -272,7 +327,11 @@ function WinnerScreen({ game }: { game: GameState }) {
 export function TurnModals({ game }: { game: GameState }) {
   const handoffFor = useGameStore((s) => s.handoffFor);
   const rolling = useGameStore((s) => s.rolling);
-  const discarder = Object.entries(game.pendingDiscards)[0];
+  // computer players discard on their own; only show the dialog to humans
+  const discarder = Object.entries(game.pendingDiscards).find(([id]) => !game.players[Number(id)].isAI);
+  const offer = game.tradeOffer;
+  const offerFromAI = offer && game.phase === 'main' && game.players[offer.from].isAI;
+  const answerer = offerFromAI ? game.players.find((p) => !p.isAI && p.id !== offer.from && offer.responses[p.id] === undefined) : undefined;
   return (
     <AnimatePresence>
       {game.phase === 'gameOver' && game.winner !== null && <WinnerScreen key="win" game={game} />}
@@ -280,6 +339,11 @@ export function TurnModals({ game }: { game: GameState }) {
       {!rolling && handoffFor === null && game.phase === 'discard' && discarder && (
         <Backdrop key="discard">
           <DiscardDialog game={game} player={Number(discarder[0])} required={discarder[1]} />
+        </Backdrop>
+      )}
+      {handoffFor === null && answerer && (
+        <Backdrop key={`offer-${offer!.id}-${answerer.id}`}>
+          <IncomingOffer game={game} player={answerer.id} />
         </Backdrop>
       )}
       {handoffFor === null && game.phase === 'steal' && !game.players[game.currentPlayer].isAI && (

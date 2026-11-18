@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useAIController } from '../store/useAIController';
 import { useGameStore } from '../store/useGameStore';
 import { BoardCanvas } from '../three/BoardScene';
 import { BuildMenu } from '../ui/hud/BuildMenu';
@@ -24,6 +25,7 @@ import { Logo } from '../ui/Logo';
 export function GameScreen() {
   const game = useGameStore((s) => s.game);
   const [showSide, setShowSide] = useState(false);
+  useAIController();
   if (!game) return null;
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative h-full w-full">

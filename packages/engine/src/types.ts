@@ -1,4 +1,4 @@
-import type { DevCardType, HarborType, PlayerColor, Resource, Terrain } from './constants';
+import type { AILevel, DevCardType, HarborType, PlayerColor, Resource, Terrain } from './constants';
 
 export type ResourceBundle = Record<Resource, number>;
 
@@ -76,6 +76,8 @@ export interface Player {
   color: PlayerColor;
   avatar: number;
   isAI: boolean;
+  /** Difficulty of a computer player (ignored for humans). */
+  aiLevel?: AILevel;
   resources: ResourceBundle;
   /** Playable development cards. */
   devCards: DevCardType[];

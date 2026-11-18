@@ -38,6 +38,7 @@ const TOGGLES: { key: keyof Settings; label: string; hint: string }[] = [
   { key: 'showProbabilities', label: 'Show roll odds on hover', hint: 'Hovering a hex shows how often its number is rolled.' },
   { key: 'revealHands', label: 'Open hands', hint: "Show every player's resource breakdown (casual play). Off: only totals for others." },
   { key: 'handoff', label: 'Pass-and-play curtain', hint: 'Cover the screen between turns so the next player can take the device privately.' },
+  { key: 'fastAI', label: 'Fast computer turns', hint: "Shorter pauses between computer players' moves." },
   { key: 'autoRotateMenu', label: 'Rotate island on the menu', hint: 'Slowly turns the island behind the main menu.' },
 ];
 

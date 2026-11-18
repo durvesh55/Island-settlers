@@ -1,3 +1,4 @@
+import { viewerId } from '../../lib/viewer';
 import { AnimatePresence, motion } from 'framer-motion';
 import { RESOURCES, type GameEvent, type GameState, type Resource } from '@island/engine';
 import { RESOURCE_CARD_THEME, RESOURCE_LABEL } from '../../lib/colors';
@@ -74,7 +75,7 @@ export function ResourceHand({ game }: { game: GameState }) {
   // In local pass-and-play the hand belongs to the active player; on the player who just
   // collected resources we briefly keep showing their gain.
 
-  const viewer = game.players[game.currentPlayer];
+  const viewer = game.players[viewerId(game)];
   const gains = gainsFor(lastEvents, viewer.id);
 
   return (

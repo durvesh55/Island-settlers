@@ -6,8 +6,8 @@ gather resources, build roads, settlements and cities, trade, and race to 10 vic
 Original artwork and branding. Every board, texture, piece, avatar and icon is generated
 procedurally or drawn in SVG, so no third-party game assets are used.
 
-> **Status:** Phases 1–3 complete: the full base-game rules for local pass-and-play, including trading,
-> development cards, Longest Road and Largest Army.
+> **Status:** Phases 1–4 complete: the full base-game rules, including trading, development cards,
+> Longest Road and Largest Army, played pass-and-play or against Easy / Normal / Hard computer opponents.
 > See [PROGRESS.md](PROGRESS.md) for exactly what works and what is pending.
 
 ## Requirements
@@ -37,6 +37,7 @@ Other scripts (run from the repository root):
 `http://localhost:5173/?quick=4&seed=123&auto=6` jumps straight into a local 4-player game
 (`quick=3` for 3 players) on island `123`, and makes `auto` random **legal** setup
 placements through the normal engine path. This is useful for testing and screenshots.
+Add `&ai=3` to make the last three seats computer players, or `&ai=4&level=hard` to watch them play each other.
 
 ## Controls
 
@@ -52,6 +53,9 @@ placements through the normal engine path. This is useful for testing and screen
   rates) or offer a trade to all players. Each player accepts or declines, then you pick a partner.
 - **Development cards:** buy from the Build menu (`4`), then play one per turn from your hand,
   even before rolling. A card can't be played on the turn you bought it.
+- **Single Player:** choose *Single Player*, then set each seat to Human or Computer and pick a
+  difficulty. Computer players move with short pauses (turn on **Fast computer turns** in Settings to
+  speed them up). When one offers you a trade, a dialog asks you to accept or decline.
 - **Pass-and-play:** between turns a curtain asks the next player to take the device (`Enter` to continue).
   You can turn it off in Settings.
 - Hover any terrain hex to see what it produces and how often its number is rolled.
@@ -72,6 +76,7 @@ packages/engine/     Pure TypeScript rules engine: no React, no DOM, fully unit-
   src/placement.ts   Distance rule, road connectivity, legal spots for every piece
   src/trading.ts     Maritime trade ratios from occupied harbors
   src/victory.ts     Public / total victory points
+  src/ai.ts          Computer players: chooseAIAction(state, player) → next legal action
   test/              Vitest suites
 apps/client/         React + Vite + Tailwind + Framer Motion + React Three Fiber
   src/three/         3D tabletop: table, framed sea (shader), tiles, terrain props,
@@ -79,7 +84,8 @@ apps/client/         React + Vite + Tailwind + Framer Motion + React Three Fiber
   src/ui/            HUD: logo, side nav, top bar, player panels, resource hand,
                      build menu, dev cards, drawers, settings, toasts
   src/screens/       Main menu, mode select, player setup, game, rules
-  src/store/         Zustand store: dispatches actions through the engine and persists them
+  src/store/         Zustand store: dispatches actions through the engine and persists them;
+                     useAIController runs computer players through the same dispatch path
   src/lib/           Canvas textures, SVG resource art, Web Audio sound effects
 ```
 

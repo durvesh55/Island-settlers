@@ -2,8 +2,8 @@
 
 Legend: ✅ done and tested · 🟡 partial · ⏳ not started
 
-**Test coverage:** 57 engine unit tests, including 6 randomized full-game simulations (with trades,
-development cards and awards) of thousands of legal actions each, with invariants checked after every action (resources conserved at 95,
+**Test coverage:** 71 engine unit tests, including 6 randomized full-game simulations (with trades,
+development cards and awards) and 9 full games played entirely by computer players, each thousands of legal actions long, with invariants checked after every action (resources conserved at 95,
 piece counts, distance rule). There are also browser end-to-end runs with real mouse and keyboard input.
 
 ## Phase 1 — Foundation & visual board ✅
@@ -53,9 +53,25 @@ piece counts, distance rule). There are also browser end-to-end runs with real m
 
 Not yet verified in a browser run with real mouse and keyboard input (engine tests, typecheck and production build pass).
 
-## Phase 4 — AI opponents and full local play ⏳
+## Phase 4 — AI opponents and full local play ✅
 
-Local pass-and-play is fully playable now; Single Player (AI opponents) is not started.
+| Feature | Status | Notes |
+| --- | --- | --- |
+| Computer player engine (`ai.ts`): pure, deterministic, uses only public information | ✅ | Never sees opponents' cards, only hand sizes; same state → same move |
+| Setup: scores corners by pips, scarcity, resource variety and harbors; aims the road at the next good spot | ✅ | |
+| Turn play: picks a goal (settlement, city, road towards a spot, dev card) and builds when it can afford it | ✅ | Spends spare cards when holding more than 7 |
+| Bank/harbor trades towards the goal; 1-for-1 offers to the table; answers offers on their merits | ✅ | Won't help a player at 8+ VP |
+| Robber: targets the leader's best hex, never its own; robs the leader | ✅ | |
+| Dev cards: Knight when the robber hurts it or to take Largest Army, Road Building, Year of Plenty, Monopoly | ✅ | Monopoly picks a resource from opponents' *production*, not their hands |
+| Discards keep the cards its goal needs | ✅ | |
+| Easy / Normal / Hard per seat | ✅ | In 30 all-AI test games: Hard won 30%, Normal 25% per seat, Easy 20% |
+| Single Player mode; Human/Computer toggle and difficulty per seat | ✅ | Mixed tables work too; the pass-and-play curtain appears only with 2+ humans |
+| AI controller with readable pauses; **Fast computer turns** setting | ✅ | `useAIController.ts` |
+| Offer dialog when a computer player proposes a trade to a human | ✅ | |
+| Computer hands and bought cards stay hidden; HUD shows the human's own hand during computer turns | ✅ | |
+
+Not yet checked in a browser with real mouse and keyboard input. Engine tests, typecheck and the production build all pass.
+Dev shortcut: `?quick=4&ai=3` (you vs 3 computers), `?quick=4&ai=4&level=hard` (watch computers play).
 
 ## Phase 5 — Online multiplayer (Express + Socket.IO + Postgres/Supabase) ⏳
 
@@ -103,4 +119,3 @@ Deliberate departures:
 
 - In pass-and-play, each player answers a trade offer on the shared screen, so with hidden hands
   the other players can see the answers. Private responses come with online play (Phase 5).
-- Single Player (AI opponents) is not available yet (Phase 4).

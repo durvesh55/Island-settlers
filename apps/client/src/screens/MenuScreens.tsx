@@ -65,7 +65,7 @@ export function MainMenu() {
 
 const MODES: { id: GameMode; title: string; text: string; available: boolean; badge?: string }[] = [
   { id: 'local', title: 'Local Multiplayer', text: '3–4 settlers share one device and pass it around each turn.', available: true },
-  { id: 'single', title: 'Single Player', text: 'Face 2–3 computer opponents that build, trade and scheme.', available: false, badge: 'Phase 4' },
+  { id: 'single', title: 'Single Player', text: 'Face 2–3 computer opponents that build, trade and scheme.', available: true },
   { id: 'online', title: 'Online Multiplayer', text: 'Create a room, share the code and play with friends anywhere.', available: false, badge: 'Phase 5' },
 ];
 

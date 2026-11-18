@@ -1,3 +1,4 @@
+import { viewerId } from '../../lib/viewer';
 import { AnimatePresence, motion } from 'framer-motion';
 import { longestRoadLength, publicVictoryPoints, RESOURCES, totalCards, type GameState, type Player } from '@island/engine';
 import { PLAYER_PALETTE } from '../../lib/colors';
@@ -141,7 +142,7 @@ export function PlayerPanels({ game }: { game: GameState }) {
           game={game}
           player={p}
           active={p.id === game.currentPlayer}
-          revealed={revealHands || p.id === game.currentPlayer}
+          revealed={revealHands || p.id === viewerId(game)}
         />
       ))}
     </div>

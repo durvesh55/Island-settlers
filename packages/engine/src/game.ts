@@ -5,6 +5,7 @@ import {
   MAX_PLAYERS,
   MIN_PLAYERS,
   PIECE_LIMITS,
+  type AILevel,
   type DevCardType,
   type PlayerColor,
 } from './constants';
@@ -18,6 +19,7 @@ export interface PlayerConfig {
   color: PlayerColor;
   avatar: number;
   isAI: boolean;
+  aiLevel?: AILevel;
 }
 
 export interface GameConfig {
@@ -68,6 +70,7 @@ export function createGame(config: GameConfig): GameState {
     color: p.color,
     avatar: p.avatar,
     isAI: p.isAI,
+    ...(p.isAI ? { aiLevel: p.aiLevel ?? 'normal' } : {}),
     resources: emptyBundle(),
     devCards: [],
     newDevCards: [],

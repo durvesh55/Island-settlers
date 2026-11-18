@@ -1,3 +1,4 @@
+import { viewerId } from '../../lib/viewer';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DEV_CARD_TYPES, RESOURCES, validRoadSpots, type DevCardType, type GameState, type Resource } from '@island/engine';
@@ -50,7 +51,7 @@ export function DevCardFace({ type, size = 'sm', dim }: { type: DevCardType; siz
 export function DevHand({ game }: { game: GameState }) {
   const dispatch = useGameStore((s) => s.dispatch);
   const openDialog = useGameStore((s) => s.setDevCardDialog);
-  const player = game.players[game.currentPlayer];
+  const player = game.players[viewerId(game)];
   const groups = DEV_CARD_TYPES.map((t) => ({
     type: t,
     ready: player.devCards.filter((c) => c === t).length,

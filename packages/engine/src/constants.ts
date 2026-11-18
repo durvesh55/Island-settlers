@@ -60,6 +60,10 @@ export const DEV_DECK_COUNTS: Record<DevCardType, number> = {
   victoryPoint: 5,
 };
 
+/** Computer opponent difficulty. */
+export const AI_LEVELS = ['easy', 'normal', 'hard'] as const;
+export type AILevel = (typeof AI_LEVELS)[number];
+
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 4;
 
