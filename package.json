@@ -1,0 +1,17 @@
+{
+  "name": "island-settlers",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Island Settlers — a premium digital tabletop strategy game",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @island/client",
+    "build": "npm run build -w @island/client",
+    "preview": "npm run preview -w @island/client",
+    "test": "npm test -w @island/engine",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}
