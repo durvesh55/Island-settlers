@@ -6,8 +6,9 @@ gather resources, build roads, settlements and cities, trade, and race to 10 vic
 Original artwork and branding. Every board, texture, piece, avatar and icon is generated
 procedurally or drawn in SVG, so no third-party game assets are used.
 
-> **Status:** Phases 1–4 complete: the full base-game rules, including trading, development cards,
-> Longest Road and Largest Army, played pass-and-play or against Easy / Normal / Hard computer opponents.
+> **Status:** Phases 1–5 complete: the full base-game rules, including trading, development cards,
+> Longest Road and Largest Army, played pass-and-play, against Easy / Normal / Hard computer opponents,
+> or online with friends.
 > See [PROGRESS.md](PROGRESS.md) for exactly what works and what is pending.
 
 ## Requirements
@@ -19,7 +20,8 @@ procedurally or drawn in SVG, so no third-party game assets are used.
 
 ```bash
 npm install      # installs all workspaces
-npm run dev      # starts the game at http://localhost:5173
+npm run dev      # starts the game at http://localhost:5173 (local modes only)
+npm run dev:online   # game server on :3001 + client on :5173 (all modes, including online)
 ```
 
 Other scripts (run from the repository root):
@@ -27,7 +29,9 @@ Other scripts (run from the repository root):
 | Command             | What it does                                        |
 | ------------------- | --------------------------------------------------- |
 | `npm run dev`       | Vite dev server with hot reload                     |
-| `npm test`          | Runs the game-engine unit tests (Vitest)            |
+| `npm run dev:online` | Game server (port 3001) and client together; Vite proxies `/socket.io` and `/api` |
+| `npm start`         | Builds the client and runs the production server on `PORT` (default 3001) |
+| `npm test`          | Runs the engine and server tests (Vitest)           |
 | `npm run typecheck` | Type-checks every workspace                         |
 | `npm run build`     | Type-checks and builds the client to `apps/client/dist` |
 | `npm run preview`   | Serves the production build                         |
@@ -100,7 +104,34 @@ Key design decisions:
   onto canvases at runtime. The decorations (trees, peaks, wheat, sheep, bricks, dunes) are
   instanced 3D meshes.
 
-## Planned stack for later phases
+## Online play
 
-- **Server (Phase 5):** Node.js + Express + Socket.IO in `apps/server`, reusing `@island/engine`.
-- **Database:** PostgreSQL (or Supabase) for rooms, reconnection and match history.
+`apps/server` is a Node.js + Express + Socket.IO server that reuses `@island/engine`:
+
+```
+apps/server/src/server.ts   HTTP + Socket.IO wiring, /api/health, /api/matches, serves the built client
+apps/server/src/rooms.ts    Rooms: lobby, seats and tokens, actions, server-side computer players
+apps/server/src/store.ts    Persistence: in-memory, or PostgreSQL / Supabase
+packages/engine/src/online.ts  Per-player redaction and the shared message types
+```
+
+- **The server is the authority.** Clients send actions; the server checks the action is for the
+  sender's own seat, runs it through `applyAction`, and sends each player their own redacted view.
+- **Hidden information stays hidden.** Other players' cards arrive as counts only. The deck order and
+  the RNG state never leave the server, so dice and draws cannot be predicted.
+- **Reconnection.** Joining gives the browser a secret seat token, kept in `localStorage`. Reconnecting
+  with it reclaims the seat, even after a server restart if a database is configured.
+
+Environment variables:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PORT` | `3001` | HTTP and Socket.IO port |
+| `DATABASE_URL` | unset (memory) | PostgreSQL or Supabase connection string; tables are created on start |
+| `PGSSL` | auto | `1` forces TLS (auto-on for Supabase URLs and `sslmode=require`) |
+| `BOT_DELAY_MS` | `900` | Pause before computer players act |
+| `CORS_ORIGINS` | unset | Comma-separated origins, if the client is hosted elsewhere |
+| `VITE_SERVER_URL` | same origin | Build-time: where the client connects, if the server is elsewhere |
+
+To deploy, run `npm start` on any Node 20+ host that supports WebSockets (Render, Railway, Fly.io, a
+VPS). It builds the client and serves the game and the sockets from one port.

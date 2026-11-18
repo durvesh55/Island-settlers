@@ -1,4 +1,4 @@
-import { viewerId } from '../../lib/viewer';
+import { controlsTurn, viewerId } from '../../lib/viewer';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DEV_CARD_TYPES, RESOURCES, validRoadSpots, type DevCardType, type GameState, type Resource } from '@island/engine';
@@ -21,7 +21,7 @@ const FRAME: Record<DevCardType, string> = {
 export function playability(game: GameState, card: DevCardType): { ok: boolean; reason: string } {
   const p = game.players[game.currentPlayer];
   if (card === 'victoryPoint') return { ok: false, reason: 'Counts automatically — kept hidden until the game ends' };
-  if (p.isAI) return { ok: false, reason: 'Waiting for the computer player' };
+  if (!controlsTurn(game)) return { ok: false, reason: p.isAI ? 'Waiting for the computer player' : `Wait for your turn` };
   if (!p.devCards.includes(card)) return { ok: false, reason: 'Bought this turn — playable from your next turn' };
   if (game.devCardPlayedThisTurn) return { ok: false, reason: 'Only one development card per turn' };
   if (game.phase !== 'roll' && game.phase !== 'main') return { ok: false, reason: 'Finish the current step first' };

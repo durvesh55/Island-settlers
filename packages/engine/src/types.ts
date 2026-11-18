@@ -84,6 +84,10 @@ export interface Player {
   /** Cards bought this turn (not yet playable). */
   newDevCards: DevCardType[];
   knightsPlayed: number;
+  /** Set only in a redacted online view of another player: their hidden hand size. */
+  handCount?: number;
+  /** Set only in a redacted online view of another player: their hidden development card count. */
+  devCardCount?: number;
   roadsLeft: number;
   settlementsLeft: number;
   citiesLeft: number;
@@ -157,4 +161,6 @@ export interface GameState {
   winner: number | null;
   longestRoadHolder: number | null;
   largestArmyHolder: number | null;
+  /** Set only in a redacted online view: the seat this view was made for. */
+  viewer?: number;
 }

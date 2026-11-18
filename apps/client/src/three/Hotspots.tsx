@@ -1,3 +1,4 @@
+import { controlsTurn } from '../lib/viewer';
 import { useMemo, useRef, useState } from 'react';
 import { useFrame, type ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -176,7 +177,7 @@ export function Hotspots({ game }: { game: GameState }) {
     return none;
   }, [game, buildMode, pid]);
 
-  if (player.isAI || rolling || handoff !== null) return null;
+  if (!controlsTurn(game) || rolling || handoff !== null) return null;
   const setup = game.phase === 'setup';
   const act = (a: GameAction) => () => dispatch(a);
 

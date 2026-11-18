@@ -1,3 +1,4 @@
+import { possessive } from '../../lib/text';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { GameState } from '@island/engine';
@@ -76,7 +77,7 @@ export function TopBar({ game }: { game: GameState }) {
           }}
         >
           <PlayIcon width={16} height={16} />
-          <span className="max-w-[10rem] truncate">{player.name}&rsquo;s Turn</span>
+          <span className="max-w-[10rem] truncate">{possessive(player.name)} Turn</span>
         </motion.div>
       </AnimatePresence>
 

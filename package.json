@@ -9,9 +9,15 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @island/client",
+    "dev:server": "npm run dev -w @island/server",
+    "dev:online": "concurrently -n server,client -c yellow,cyan \"npm run dev -w @island/server\" \"npm run dev -w @island/client\"",
+    "start": "npm run build && npm start -w @island/server",
     "build": "npm run build -w @island/client",
     "preview": "npm run preview -w @island/client",
-    "test": "npm test -w @island/engine",
+    "test": "npm test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
   }
 }

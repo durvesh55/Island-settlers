@@ -1,3 +1,4 @@
+import { canControl } from '../../lib/viewer';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { canAfford, emptyBundle, RESOURCES, totalCards, tradeRatios, type GameState, type Resource, type ResourceBundle } from '@island/engine';
@@ -185,8 +186,8 @@ function OpenOffer({ game }: { game: GameState }) {
               <li key={p.id} className="flex items-center gap-2 rounded-lg p-1.5" style={{ background: `${pal.panelFrom}88` }}>
                 <Avatar index={p.avatar} ring={pal.accent} size={30} />
                 <span className="flex-1 truncate font-display">{p.name}</span>
-                {answer === undefined && p.isAI && <span className="text-xs italic text-parchment-300/70">thinking…</span>}
-                {answer === undefined && !p.isAI && (
+                {answer === undefined && !canControl(game, p.id) && <span className="text-xs italic text-parchment-300/70">{p.isAI ? 'thinking…' : 'deciding…'}</span>}
+                {answer === undefined && canControl(game, p.id) && (
                   <>
                     <button
                       className="rounded bg-emerald-700 px-2 py-0.5 text-xs text-white hover:bg-emerald-600 disabled:opacity-40"

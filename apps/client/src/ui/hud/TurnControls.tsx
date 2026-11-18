@@ -1,3 +1,4 @@
+import { controlsTurn } from '../../lib/viewer';
 import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { GameState } from '@island/engine';
@@ -15,7 +16,7 @@ function useShortcuts(game: GameState) {
       const s = useGameStore.getState();
       if (s.handoffFor !== null || s.settingsOpen) return;
       const g = s.game;
-      if (!g || g.players[g.currentPlayer].isAI) return;
+      if (!g || !controlsTurn(g)) return;
       const key = e.key.toLowerCase();
       if (key === 'r' && g.phase === 'roll') s.rollDice();
       else if (key === 'e' && g.phase === 'main') s.dispatch({ type: 'END_TURN', player: g.currentPlayer });
@@ -42,7 +43,7 @@ export function TurnControls({ game }: { game: GameState }) {
   const setBuildMode = useGameStore((s) => s.setBuildMode);
   const player = game.players[game.currentPlayer];
   const pal = PLAYER_PALETTE[player.color];
-  if (player.isAI) return null;
+  if (!controlsTurn(game)) return null;
 
   let content: React.ReactNode = null;
   if (game.phase === 'roll' || rolling) {

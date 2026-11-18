@@ -9,7 +9,11 @@ export default defineConfig({
       '@island/engine': fileURLToPath(new URL('../../packages/engine/src/index.ts', import.meta.url)),
     },
   },
-  server: { port: 5173 },
+  server: {
+    port: 5173,
+    // online play: the game server (npm run dev:server) runs on 3001
+    proxy: { '/socket.io': { target: 'http://localhost:3001', ws: true }, '/api': 'http://localhost:3001' },
+  },
   build: {
     chunkSizeWarningLimit: 1600,
     rollupOptions: {

@@ -4,6 +4,7 @@ import { validSetupRoadSpots, validSetupSettlementSpots } from '@island/engine';
 import { useGameStore } from './store/useGameStore';
 import { GameScreen } from './screens/GameScreen';
 import { MainMenu, MenuBackdrop, ModeSelect, RulesScreen } from './screens/MenuScreens';
+import { LobbyScreen, OnlineHome } from './screens/OnlineScreens';
 import { defaultPlayers, PlayerSetup } from './screens/PlayerSetup';
 import { SettingsModal, Toasts } from './ui/Overlays';
 
@@ -60,6 +61,8 @@ export default function App() {
         {screen === 'mode' && <ModeSelect key="mode" />}
         {screen === 'players' && <PlayerSetup key="players" />}
         {screen === 'rules' && <RulesScreen key="rules" />}
+        {screen === 'online' && <OnlineHome key="online" />}
+        {screen === 'lobby' && <LobbyScreen key="lobby" />}
         {screen === 'game' && <GameScreen key="game" />}
       </AnimatePresence>
       <SettingsModal />

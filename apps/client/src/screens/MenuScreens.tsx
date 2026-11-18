@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { generateBoard, randomSeed } from '@island/engine';
 import { playSound } from '../lib/sound';
-import { hasSavedGame, useGameStore, type GameMode } from '../store/useGameStore';
+import { hasSavedGame, savedOnlineRoom, useGameStore, type GameMode } from '../store/useGameStore';
 import { BoardCanvas } from '../three/BoardScene';
 import { BackIcon, BookIcon, GearIcon, PlayIcon, UsersIcon } from '../ui/icons';
 import { Logo } from '../ui/Logo';
@@ -31,6 +31,8 @@ export function MainMenu() {
   const resume = useGameStore((s) => s.resumeSavedGame);
   const setSettingsOpen = useGameStore((s) => s.setSettingsOpen);
   const canResume = hasSavedGame();
+  const onlineRoom = savedOnlineRoom();
+  const rejoin = useGameStore((s) => s.rejoinRoom);
   const go = (fn: () => void) => () => {
     playSound('click');
     fn();
@@ -47,6 +49,11 @@ export function MainMenu() {
         {canResume && (
           <button className="btn-primary" onClick={go(() => resume())}>
             <PlayIcon width={18} height={18} /> Continue game
+          </button>
+        )}
+        {onlineRoom && (
+          <button className="btn-wood py-3 text-lg" onClick={go(() => void rejoin())}>
+            <UsersIcon width={20} height={20} /> Rejoin room {onlineRoom.code}
           </button>
         )}
         <button className={canResume ? 'btn-wood py-3 text-lg' : 'btn-primary'} onClick={go(() => setScreen('mode'))}>
@@ -66,7 +73,7 @@ export function MainMenu() {
 const MODES: { id: GameMode; title: string; text: string; available: boolean; badge?: string }[] = [
   { id: 'local', title: 'Local Multiplayer', text: '3–4 settlers share one device and pass it around each turn.', available: true },
   { id: 'single', title: 'Single Player', text: 'Face 2–3 computer opponents that build, trade and scheme.', available: true },
-  { id: 'online', title: 'Online Multiplayer', text: 'Create a room, share the code and play with friends anywhere.', available: false, badge: 'Phase 5' },
+  { id: 'online', title: 'Online Multiplayer', text: 'Create a room, share the code and play with friends anywhere.', available: true },
 ];
 
 export function ModeSelect() {
@@ -87,7 +94,7 @@ export function ModeSelect() {
             onClick={() => {
               playSound('click');
               setMode(m.id);
-              setScreen('players');
+              setScreen(m.id === 'online' ? 'online' : 'players');
             }}
             className="panel-wood relative flex flex-col items-start gap-2 p-6 text-left disabled:cursor-not-allowed disabled:opacity-60"
           >

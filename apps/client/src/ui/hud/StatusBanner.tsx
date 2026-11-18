@@ -1,3 +1,5 @@
+import { controlsTurn } from '../../lib/viewer';
+import { possessive } from '../../lib/text';
 import { AnimatePresence, motion } from 'framer-motion';
 import { validSetupRoadSpots, validSetupSettlementSpots, type GameState } from '@island/engine';
 import { PLAYER_PALETTE } from '../../lib/colors';
@@ -13,13 +15,14 @@ const BUILD_PROMPT: Record<BuildMode, { title: string; detail: string }> = {
 function promptFor(game: GameState, buildMode: BuildMode | null, rolling: boolean): { title: string; detail: string } {
   const p = game.players[game.currentPlayer];
   if (rolling) return { title: 'The dice are rolling…', detail: '' };
-  if (p.isAI && game.phase !== 'gameOver') {
+  if (!controlsTurn(game) && game.phase !== 'gameOver') {
     const waiting =
       game.phase === 'discard'
         ? 'Waiting for discards.'
         : game.tradeOffer
           ? 'Waiting for answers to their trade offer.'
           : 'Watch the board and the chronicle to follow their moves.';
+    if (game.viewer !== undefined && game.phase === 'discard' && game.pendingDiscards[game.viewer] === undefined) return { title: 'A 7! Discard time', detail: 'Waiting for players holding more than 7 cards to discard.' };
     return { title: `${p.name} is taking their turn…`, detail: waiting };
   }
   switch (game.phase) {
@@ -48,7 +51,7 @@ function promptFor(game: GameState, buildMode: BuildMode | null, rolling: boolea
       return { title: `Road Building — ${game.freeRoads} free road${game.freeRoads === 1 ? '' : 's'} left`, detail: 'Choose a glowing edge connected to your network.' };
     case 'main':
       if (buildMode) return BUILD_PROMPT[buildMode];
-      return { title: `${p.name}'s turn`, detail: 'Trade (T), build (1–3), buy a card (4), play a card, then end your turn (E).' };
+      return { title: `${possessive(p.name)} turn`, detail: 'Trade (T), build (1–3), buy a card (4), play a card, then end your turn (E).' };
     case 'gameOver':
       return { title: `${game.players[game.winner!].name} wins!`, detail: '' };
   }
@@ -62,7 +65,7 @@ export function StatusBanner({ game }: { game: GameState }) {
   const { title, detail } = promptFor(game, buildMode, rolling);
   const player = game.players[game.currentPlayer];
   const pal = PLAYER_PALETTE[player.color];
-  const canAuto = game.phase === 'setup' && !player.isAI;
+  const canAuto = game.phase === 'setup' && controlsTurn(game);
 
   const placeRandom = () => {
     if (game.setup?.step === 'settlement') {

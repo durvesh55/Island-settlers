@@ -1,6 +1,6 @@
 import { viewerId } from '../../lib/viewer';
 import { AnimatePresence, motion } from 'framer-motion';
-import { longestRoadLength, publicVictoryPoints, RESOURCES, totalCards, type GameState, type Player } from '@island/engine';
+import { devCardTotal, handSize, longestRoadLength, publicVictoryPoints, RESOURCES, type GameState, type Player } from '@island/engine';
 import { PLAYER_PALETTE } from '../../lib/colors';
 import { useGameStore } from '../../store/useGameStore';
 import { Avatar } from '../Avatar';
@@ -40,7 +40,7 @@ function GainChip({ player }: { player: number }) {
 function PlayerPanel({ game, player, active, revealed }: { game: GameState; player: Player; active: boolean; revealed: boolean }) {
   const pal = PLAYER_PALETTE[player.color];
   const vp = publicVictoryPoints(game, player.id);
-  const devCount = player.devCards.length + player.newDevCards.length;
+  const devCount = devCardTotal(player);
   const longest = game.longestRoadHolder === player.id;
   const largest = game.largestArmyHolder === player.id;
   return (
@@ -88,7 +88,7 @@ function PlayerPanel({ game, player, active, revealed }: { game: GameState; play
               ))}
             </div>
           ) : (
-            <div className="mt-1.5 text-sm text-parchment-200">{totalCards(player.resources)} resource cards</div>
+            <div className="mt-1.5 text-sm text-parchment-200">{handSize(player)} resource cards</div>
           )}
         </div>
       </div>
@@ -142,7 +142,7 @@ export function PlayerPanels({ game }: { game: GameState }) {
           game={game}
           player={p}
           active={p.id === game.currentPlayer}
-          revealed={revealHands || p.id === viewerId(game)}
+          revealed={(revealHands && game.viewer === undefined) || p.id === viewerId(game) || game.phase === 'gameOver'}
         />
       ))}
     </div>

@@ -6,11 +6,16 @@ import {
   type GameAction,
   type GameEvent,
   type GameState,
+  type GameUpdate,
+  type LobbyView,
+  type PlayerColor,
+  type AILevel,
   type PlayerConfig,
 } from '@island/engine';
+import { getSocket, request } from '../lib/net';
 import { playSound, setMuted } from '../lib/sound';
 
-export type Screen = 'menu' | 'mode' | 'players' | 'game' | 'rules';
+export type Screen = 'menu' | 'mode' | 'players' | 'game' | 'rules' | 'online' | 'lobby';
 export type GameMode = 'single' | 'local' | 'online';
 export type Panel = 'game' | 'trade' | 'build' | 'development' | 'rules';
 export type BuildMode = 'road' | 'settlement' | 'city';
@@ -50,6 +55,15 @@ export interface DiceThrow {
 /** How long the dice tumble before the result is applied (ms). */
 export const DICE_ROLL_MS = 1250;
 
+/** This browser's place in an online room. */
+export interface OnlineSession {
+  code: string;
+  seat: number;
+  token: string;
+  lobby: LobbyView | null;
+  connection: 'connecting' | 'connected' | 'offline';
+}
+
 interface StoreState {
   screen: Screen;
   mode: GameMode | null;
@@ -76,6 +90,17 @@ interface StoreState {
   revealCard: { seq: number; card: DevCardType } | null;
   setDevCardDialog: (d: 'yearOfPlenty' | 'monopoly' | null) => void;
 
+  online: OnlineSession | null;
+  createRoom: (name: string, avatar: number) => Promise<boolean>;
+  joinRoom: (code: string, name: string, avatar: number) => Promise<boolean>;
+  /** Reconnect to the room saved in this browser, if any. */
+  rejoinRoom: () => Promise<boolean>;
+  leaveRoom: () => void;
+  updateSeat: (patch: { name?: string; avatar?: number; color?: PlayerColor }) => Promise<boolean>;
+  addBot: (level: AILevel) => Promise<boolean>;
+  removeSeat: (seat: number) => Promise<boolean>;
+  startOnlineGame: () => Promise<boolean>;
+
   setScreen: (s: Screen) => void;
   setMode: (m: GameMode) => void;
   togglePanel: (p: Panel) => void;
@@ -98,6 +123,7 @@ interface StoreState {
 
 const GAME_KEY = 'island-settlers:game';
 const SETTINGS_KEY = 'island-settlers:settings';
+const ONLINE_KEY = 'island-settlers:online';
 const SAVE_VERSION = 3;
 
 const DEFAULT_SETTINGS: Settings = {
@@ -134,6 +160,10 @@ interface SavedGame {
   playerConfigs: PlayerConfig[];
 }
 
+export function savedOnlineRoom(): { code: string; token: string } | null {
+  return load<{ code: string; token: string }>(ONLINE_KEY);
+}
+
 export function hasSavedGame(): boolean {
   const saved = load<SavedGame>(GAME_KEY);
   return !!saved && saved.game?.version === SAVE_VERSION && saved.game.phase !== 'gameOver';
@@ -144,6 +174,10 @@ setMuted(initialSettings.muted);
 
 let toastId = 0;
 let rollTimer: number | undefined;
+/** Online game updates wait here while the dice animation plays. */
+let updateQueue: GameUpdate[] = [];
+let lastSeq = -1;
+let socketWired = false;
 
 const isBuildEvent = (e: GameEvent) => e.type === 'roadPlaced' || e.type === 'settlementPlaced' || e.type === 'cityBuilt';
 
@@ -151,7 +185,7 @@ export const useGameStore = create<StoreState>((set, get) => {
   /** Commit a successful engine result: persist, animate, play sounds. */
   const commit = (prev: GameState, next: GameState, events: GameEvent[]) => {
     const { mode, playerConfigs, settings } = get();
-    save(GAME_KEY, { mode: mode ?? 'local', game: next, playerConfigs: playerConfigs ?? [] } satisfies SavedGame);
+    if (mode !== 'online') save(GAME_KEY, { mode: mode ?? 'local', game: next, playerConfigs: playerConfigs ?? [] } satisfies SavedGame);
 
     const patch: Partial<StoreState> = { game: next, lastEvents: events };
     if (events.some(isBuildEvent) || next.phase !== 'main') patch.buildMode = null;
@@ -187,13 +221,16 @@ export const useGameStore = create<StoreState>((set, get) => {
           get().pushToast('Setup complete! Roll the dice to begin.', 'success');
           break;
         case 'turnEnded':
-          if (settings.handoff && next.players.filter((p) => !p.isAI).length > 1 && !next.players[e.next].isAI) set({ handoffFor: e.next });
+          if (mode !== 'online' && settings.handoff && next.players.filter((p) => !p.isAI).length > 1 && !next.players[e.next].isAI) set({ handoffFor: e.next });
           else window.setTimeout(() => playSound('turn'), 200);
           break;
         case 'devCardBought':
           playSound('collect');
           // only reveal a card to a human buyer — a computer player's cards stay hidden
-          if (!next.players[e.player].isAI) set((st) => ({ revealCard: { seq: (st.revealCard?.seq ?? 0) + 1, card: e.card } }));
+          if (e.card && !next.players[e.player].isAI) {
+            const card = e.card;
+            set((st) => ({ revealCard: { seq: (st.revealCard?.seq ?? 0) + 1, card } }));
+          }
           else get().pushToast(next.players[e.player].name + ' bought a development card.', 'info');
           break;
         case 'devCardPlayed':
@@ -228,7 +265,151 @@ export const useGameStore = create<StoreState>((set, get) => {
     if (next.currentPlayer !== prev.currentPlayer && next.phase === 'setup') window.setTimeout(() => playSound('turn'), 350);
   };
 
+  /** Apply queued server updates in order; a roll first plays the dice animation. */
+  const drainUpdates = () => {
+    if (get().rolling) return;
+    const u = updateQueue.shift();
+    if (!u) return;
+    const prev = get().game;
+    const roll = u.events.find((e) => e.type === 'diceRolled');
+    const apply = () => {
+      if (get().mode !== 'online') return;
+      if (prev && prev.board.seed === u.state.board.seed) commit(prev, u.state, u.events);
+      else set({ game: u.state, lastEvents: [], panel: null, buildMode: null });
+      if (get().screen === 'lobby' && u.state) set({ screen: 'game' });
+    };
+    if (roll && roll.type === 'diceRolled' && prev) {
+      set((st) => ({ rolling: true, diceThrow: { seq: (st.diceThrow?.seq ?? 0) + 1, dice: roll.dice }, buildMode: null }));
+      playSound('dice');
+      rollTimer = window.setTimeout(() => {
+        set({ rolling: false });
+        apply();
+        drainUpdates();
+      }, DICE_ROLL_MS);
+    } else {
+      apply();
+      drainUpdates();
+    }
+  };
+
+  const wireSocket = () => {
+    if (socketWired) return getSocket();
+    socketWired = true;
+    const socket = getSocket();
+    socket.on('room:lobby', (lobby) => {
+      const online = get().online;
+      if (online && online.code === lobby.code) set({ online: { ...online, lobby, seat: lobby.you } });
+    });
+    socket.on('game:update', (u) => {
+      if (get().mode !== 'online' || u.seq <= lastSeq) return;
+      lastSeq = u.seq;
+      updateQueue.push(u);
+      drainUpdates();
+    });
+    socket.on('room:closed', (reason) => {
+      save(ONLINE_KEY, null);
+      if (get().online) {
+        set({ online: null, screen: 'online', game: null, mode: 'online' });
+        get().pushToast(reason, 'info');
+      }
+    });
+    socket.on('disconnect', () => {
+      const online = get().online;
+      if (online) set({ online: { ...online, connection: 'offline' } });
+    });
+    socket.on('connect', () => {
+      // after a dropped connection, reclaim the seat automatically
+      const online = get().online;
+      if (online && online.connection === 'offline') void get().rejoinRoom();
+    });
+    return socket;
+  };
+
+  const enterRoom = (code: string, seat: number, token: string) => {
+    window.clearTimeout(rollTimer);
+    updateQueue = [];
+    lastSeq = -1;
+    save(ONLINE_KEY, { code, token });
+    set((st) => ({
+      mode: 'online',
+      online: { code, seat, token, lobby: st.online?.code === code ? st.online.lobby : null, connection: 'connected' },
+      screen: 'lobby',
+      game: null,
+      rolling: false,
+      diceThrow: null,
+      handoffFor: null,
+      buildMode: null,
+      panel: null,
+    }));
+  };
+
+  const roomRequest = async (event: Parameters<typeof request>[0], ...args: unknown[]) => {
+    const res = await request(event, ...args);
+    if (!res.ok) {
+      get().pushToast(res.error, 'error');
+      playSound('error');
+    }
+    return res.ok;
+  };
+
+  type Joined = { code: string; seat: number; token: string };
+
   return {
+    online: null,
+    createRoom: async (name, avatar) => {
+      wireSocket();
+      const res = await request<Joined>('room:create', { name, avatar });
+      if (!res.ok) {
+        get().pushToast(res.error, 'error');
+        return false;
+      }
+      enterRoom(res.code, res.seat, res.token);
+      return true;
+    },
+    joinRoom: async (code, name, avatar) => {
+      wireSocket();
+      const res = await request<Joined>('room:join', { code, name, avatar });
+      if (!res.ok) {
+        get().pushToast(res.error, 'error');
+        return false;
+      }
+      enterRoom(res.code, res.seat, res.token);
+      return true;
+    },
+    rejoinRoom: async () => {
+      wireSocket();
+      const saved = load<{ code: string; token: string }>(ONLINE_KEY);
+      if (!saved) return false;
+      const online = get().online;
+      if (online) set({ online: { ...online, connection: 'connecting' } });
+      const res = await request<Joined>('room:join', { code: saved.code, token: saved.token });
+      if (!res.ok) {
+        if (online) set({ online: { ...online, connection: 'offline' } });
+        if (!online || /No room|started/.test(res.error)) save(ONLINE_KEY, null);
+        get().pushToast(res.error, 'error');
+        return false;
+      }
+      if (online && online.code === res.code) {
+        // same room: keep the board on screen; the server re-sends the current state
+        lastSeq = -1;
+        set({ online: { ...online, seat: res.seat, connection: 'connected' } });
+      } else {
+        enterRoom(res.code, res.seat, res.token);
+      }
+      return true;
+    },
+    leaveRoom: () => {
+      void request('room:leave');
+      save(ONLINE_KEY, null);
+      window.clearTimeout(rollTimer);
+      updateQueue = [];
+      set({ online: null, game: null, screen: 'menu', mode: null, rolling: false, panel: null });
+    },
+    updateSeat: (patch) => roomRequest('room:seat', patch),
+    addBot: (level) => roomRequest('room:addBot', { level }),
+    removeSeat: (seat) => roomRequest('room:removeSeat', { seat }),
+    startOnlineGame: () => roomRequest('room:start'),
+
     screen: 'menu',
     mode: null,
     game: null,
@@ -310,7 +491,16 @@ export const useGameStore = create<StoreState>((set, get) => {
       if (playerConfigs) get().startGame(playerConfigs);
     },
 
-    quitToMenu: () => set({ screen: 'menu', panel: null, settingsOpen: false, hoveredHex: null, buildMode: null }),
+    quitToMenu: () => {
+      if (get().mode === 'online') {
+        // keep the saved seat so the main menu can offer to rejoin
+        void request('room:leave');
+        window.clearTimeout(rollTimer);
+        updateQueue = [];
+        set({ online: null, game: null, mode: null, rolling: false });
+      }
+      set({ screen: 'menu', panel: null, settingsOpen: false, hoveredHex: null, buildMode: null });
+    },
 
     resumeSavedGame: () => {
       const saved = load<SavedGame>(GAME_KEY);
@@ -330,9 +520,19 @@ export const useGameStore = create<StoreState>((set, get) => {
     },
 
     dispatch: (action) => {
-      const { game, rolling } = get();
+      const { game, rolling, mode } = get();
       if (!game) return false;
       if (rolling) return false; // wait for the dice to land
+      if (mode === 'online') {
+        // the server is the authority: it answers with an error or broadcasts the new state
+        void request('game:action', action).then((res) => {
+          if (!res.ok) {
+            get().pushToast(res.error, 'error');
+            playSound('error');
+          }
+        });
+        return true;
+      }
       const result = applyAction(game, action);
       if (!result.ok) {
         get().pushToast(result.error, 'error');
@@ -345,8 +545,12 @@ export const useGameStore = create<StoreState>((set, get) => {
 
     /** Validates and resolves the roll immediately, but shows the outcome when the dice land. */
     rollDice: () => {
-      const { game, rolling } = get();
+      const { game, rolling, mode } = get();
       if (!game || rolling) return;
+      if (mode === 'online') {
+        get().dispatch({ type: 'ROLL_DICE', player: game.viewer ?? game.currentPlayer });
+        return;
+      }
       const result = applyAction(game, { type: 'ROLL_DICE', player: game.currentPlayer });
       if (!result.ok) {
         get().pushToast(result.error, 'error');

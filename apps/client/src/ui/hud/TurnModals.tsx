@@ -1,7 +1,9 @@
+import { canControl, controlsTurn } from '../../lib/viewer';
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   canAfford,
+  handSize,
   publicVictoryPoints,
   RESOURCES,
   totalCards,
@@ -58,7 +60,7 @@ function DiscardDialog({ game, player, required }: { game: GameState; player: nu
         <div>
           <h2 className="font-display text-2xl text-parchment-50">The robber strikes!</h2>
           <p className="text-parchment-200">
-            <b style={{ color: pal.accent }}>{p.name}</b> holds {totalCards(p.resources)} cards and must discard <b>{required}</b>.
+            <b style={{ color: pal.accent }}>{p.name}</b> holds {handSize(p)} cards and must discard <b>{required}</b>.
           </p>
         </div>
       </div>
@@ -174,7 +176,7 @@ function StealDialog({ game }: { game: GameState }) {
             >
               <Avatar index={v.avatar} ring={pal.accent} size={42} />
               <span className="flex-1 font-display text-lg">{v.name}</span>
-              <span className="text-sm text-parchment-200">{totalCards(v.resources)} cards</span>
+              <span className="text-sm text-parchment-200">{handSize(v)} cards</span>
             </motion.button>
           );
         })}
@@ -328,10 +330,11 @@ export function TurnModals({ game }: { game: GameState }) {
   const handoffFor = useGameStore((s) => s.handoffFor);
   const rolling = useGameStore((s) => s.rolling);
   // computer players discard on their own; only show the dialog to humans
-  const discarder = Object.entries(game.pendingDiscards).find(([id]) => !game.players[Number(id)].isAI);
+  const discarder = Object.entries(game.pendingDiscards).find(([id]) => canControl(game, Number(id)));
   const offer = game.tradeOffer;
-  const offerFromAI = offer && game.phase === 'main' && game.players[offer.from].isAI;
-  const answerer = offerFromAI ? game.players.find((p) => !p.isAI && p.id !== offer.from && offer.responses[p.id] === undefined) : undefined;
+  // an offer from a seat this device doesn't control (a computer player, or another online player)
+  const incoming = offer && game.phase === 'main' && !canControl(game, offer.from);
+  const answerer = incoming ? game.players.find((p) => canControl(game, p.id) && p.id !== offer.from && offer.responses[p.id] === undefined) : undefined;
   return (
     <AnimatePresence>
       {game.phase === 'gameOver' && game.winner !== null && <WinnerScreen key="win" game={game} />}
@@ -346,7 +349,7 @@ export function TurnModals({ game }: { game: GameState }) {
           <IncomingOffer game={game} player={answerer.id} />
         </Backdrop>
       )}
-      {handoffFor === null && game.phase === 'steal' && !game.players[game.currentPlayer].isAI && (
+      {handoffFor === null && game.phase === 'steal' && controlsTurn(game) && (
         <Backdrop key="steal">
           <StealDialog game={game} />
         </Backdrop>

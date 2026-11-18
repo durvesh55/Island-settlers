@@ -25,6 +25,7 @@ import { Logo } from '../ui/Logo';
 export function GameScreen() {
   const game = useGameStore((s) => s.game);
   const [showSide, setShowSide] = useState(false);
+  const connection = useGameStore((s) => s.online?.connection);
   useAIController();
   if (!game) return null;
   return (
@@ -36,7 +37,7 @@ export function GameScreen() {
 
       <div className="pointer-events-none absolute inset-0">
         {/* left: logo, navigation, drawer */}
-        <div className="absolute bottom-44 left-3 top-[176px] flex flex-col gap-3 sm:bottom-4 sm:left-4 sm:top-4">
+        <div className="absolute bottom-44 left-3 top-[176px] flex flex-col gap-3 sm:bottom-[212px] sm:left-4 sm:top-4">
           <div className="pointer-events-auto hidden sm:block">
             <Logo />
           </div>
@@ -86,6 +87,11 @@ export function GameScreen() {
           </div>
         </div>
       </div>
+      {connection && connection !== 'connected' && (
+        <div className="pointer-events-none fixed inset-x-0 top-3 z-50 flex justify-center px-4">
+          <div className="rounded-xl border border-red-400/60 bg-red-950/90 px-4 py-2 text-red-100 shadow-panel">Connection lost. Reconnecting to the game server…</div>
+        </div>
+      )}
       <TurnModals game={game} />
       <DevCardDialog game={game} />
       <DevCardReveal />

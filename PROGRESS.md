@@ -73,7 +73,25 @@ Not yet verified in a browser run with real mouse and keyboard input (engine tes
 Not yet checked in a browser with real mouse and keyboard input. Engine tests, typecheck and the production build all pass.
 Dev shortcut: `?quick=4&ai=3` (you vs 3 computers), `?quick=4&ai=4&level=hard` (watch computers play).
 
-## Phase 5 — Online multiplayer (Express + Socket.IO + Postgres/Supabase) ⏳
+## Phase 5 — Online multiplayer (Express + Socket.IO + Postgres/Supabase) ✅
+
+| Feature | Status | Notes |
+| --- | --- | --- |
+| `apps/server`: Express + Socket.IO, reusing `@island/engine` | ✅ | The server runs every action through `applyAction` |
+| Rooms with 5-character codes; lobby with seats, colors, host controls | ✅ | Host adds/removes computer players and starts at 3–4 seats |
+| Server-side validation: only your own seat, only when allowed | ✅ | Malformed actions are rejected, not crashed on |
+| Hidden information: each player gets a redacted view | ✅ | Other hands and dev cards are counts only; deck order and RNG state are removed; stolen/bought cards only shown to those involved |
+| Computer players run on the server | ✅ | Same AI as single player |
+| Reconnection: a seat token in the browser reclaims the seat | ✅ | Automatic after a dropped connection; **Rejoin room** on the main menu |
+| Persistence: rooms survive a server restart; finished matches are recorded | ✅ | Postgres/Supabase when `DATABASE_URL` is set, otherwise in memory; `GET /api/matches` |
+| Client: Online screen (create/join), waiting room, dice animation from server rolls | ✅ | `OnlineScreens.tsx`, `lib/net.ts` |
+| Production: one Node process serves the built client and the sockets | ✅ | `npm start` |
+
+**Tests:** 8 server tests with real Socket.IO clients cover the lobby, redaction, turn and seat checks, reconnection,
+a server restart, a full online game against server-side computer players, and the Postgres store (via `pg-mem`).
+Also checked by hand: online play through the Vite dev proxy, and the production server serving the game and sockets on one port.
+Not yet checked: against a real Postgres/Supabase database (none installed here), and in a browser with real clicks.
+Not built yet: a turn timer, and replacing a player who never comes back with a computer player.
 
 ## Phase 6 — Polish, performance, mobile ⏳
 
@@ -118,4 +136,5 @@ Deliberate departures:
 ## Known limitations right now
 
 - In pass-and-play, each player answers a trade offer on the shared screen, so with hidden hands
-  the other players can see the answers. Private responses come with online play (Phase 5).
+  the other players can see the answers. Online play keeps answers private.
+- Online, a game waits for a disconnected player to return; there is no turn timer yet.

@@ -45,9 +45,11 @@ export function useAIController(): void {
   const rolling = useGameStore((s) => s.rolling);
   const fast = useGameStore((s) => s.settings.fastAI);
   const screen = useGameStore((s) => s.screen);
+  const mode = useGameStore((s) => s.mode);
 
   useEffect(() => {
-    if (!game || rolling || screen !== 'game' || game.phase === 'gameOver') return;
+    // online, computer players run on the server
+    if (!game || mode === 'online' || rolling || screen !== 'game' || game.phase === 'gameOver') return;
     let next: { player: number; action: GameAction } | null = null;
     for (const id of pendingAIPlayers(game)) {
       const action = chooseAIAction(game, id, memoFor(id));
@@ -80,5 +82,5 @@ export function useAIController(): void {
       delayFor(action) * (fast ? 0.35 : 1),
     );
     return () => window.clearTimeout(timer);
-  }, [game, rolling, fast, screen]);
+  }, [game, rolling, fast, screen, mode]);
 }

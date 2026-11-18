@@ -1,3 +1,4 @@
+import { controlsTurn } from '../../lib/viewer';
 import {
   BUILD_COSTS,
   canAfford,
@@ -30,7 +31,7 @@ export function buildAvailability(game: GameState, kind: BuildKind): BuildAvaila
   if (game.phase === 'setup') return { ok: false, reason: 'During setup, place pieces for free on the board' };
   if (game.phase === 'roll') return { ok: false, reason: 'Roll the dice first' };
   if (game.phase !== 'main') return { ok: false, reason: 'Finish the robber first' };
-  if (p.isAI) return { ok: false, reason: 'Waiting for the computer player' };
+  if (!controlsTurn(game)) return { ok: false, reason: p.isAI ? 'Waiting for the computer player' : `Waiting for ${p.name}` };
   if (!canAfford(p.resources, BUILD_COSTS[kind])) return { ok: false, reason: 'Not enough resources' };
   if (kind === 'road') {
     if (p.roadsLeft <= 0) return { ok: false, reason: 'All 15 roads are on the board' };

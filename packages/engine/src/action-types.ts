@@ -40,7 +40,8 @@ export type GameEvent =
   | { type: 'discarded'; player: number; resources: ResourceBundle }
   | { type: 'robberMoved'; player: number; hex: number }
   | { type: 'stolen'; thief: number; victim: number; resource: Resource | null }
-  | { type: 'devCardBought'; player: number; card: DevCardType }
+  /** `card` is omitted in the copy sent to other online players. */
+  | { type: 'devCardBought'; player: number; card?: DevCardType }
   | { type: 'devCardPlayed'; player: number; card: DevCardType }
   | { type: 'yearOfPlenty'; player: number; resources: [Resource, Resource] }
   | { type: 'monopoly'; player: number; resource: Resource; taken: number[] }
