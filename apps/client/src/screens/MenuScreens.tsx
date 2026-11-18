@@ -73,7 +73,10 @@ export function MainMenu() {
 const MODES: { id: GameMode; title: string; text: string; available: boolean; badge?: string }[] = [
   { id: 'local', title: 'Local Multiplayer', text: '3–4 settlers share one device and pass it around each turn.', available: true },
   { id: 'single', title: 'Single Player', text: 'Face 2–3 computer opponents that build, trade and scheme.', available: true },
-  { id: 'online', title: 'Online Multiplayer', text: 'Create a room, share the code and play with friends anywhere.', available: true },
+  // A static build without the game server (e.g. a hosted demo page) sets VITE_NO_ONLINE=1.
+  ...(import.meta.env.VITE_NO_ONLINE === '1'
+    ? [{ id: 'online' as const, title: 'Online Multiplayer', text: 'Play with friends anywhere. Run the game server (npm start) to enable online rooms.', available: false, badge: 'Needs the game server' }]
+    : [{ id: 'online' as const, title: 'Online Multiplayer', text: 'Create a room, share the code and play with friends anywhere.', available: true }]),
 ];
 
 export function ModeSelect() {
@@ -100,7 +103,7 @@ export function ModeSelect() {
           >
             {m.badge && (
               <span className="absolute right-3 top-3 rounded-full border border-gold-500/50 bg-black/40 px-2 py-0.5 text-xs text-gold-300">
-                Coming in {m.badge}
+                {m.badge}
               </span>
             )}
             <span className="font-display text-2xl text-parchment-50">{m.title}</span>
