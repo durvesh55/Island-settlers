@@ -250,9 +250,20 @@ export class Room {
     if (!this.record.seats.some((s) => !s.isAI)) this.close('Everyone left the room');
   }
 
+  /** Host restarts the room on a brand-new island with the same players. */
+  newIsland(byToken: string): string | null {
+    if (this.seatOf(byToken) !== this.record.hostSeat) return 'Only the host can start a new island';
+    if (this.record.status === 'lobby') return 'The game has not started yet';
+    return this.begin();
+  }
+
   start(byToken: string, seed?: number): string | null {
     if (this.seatOf(byToken) !== this.record.hostSeat) return 'Only the host can start the game';
     if (this.record.status !== 'lobby') return 'The game has already started';
+    return this.begin(seed);
+  }
+
+  private begin(seed?: number): string | null {
     const n = this.record.seats.length;
     if (n < MIN_PLAYERS) return `A game needs at least ${MIN_PLAYERS} players — invite a friend or add a computer player`;
     this.record.game = createGame({

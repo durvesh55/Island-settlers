@@ -487,6 +487,10 @@ export const useGameStore = create<StoreState>((set, get) => {
     },
 
     newIsland: () => {
+      if (get().mode === 'online') {
+        void roomRequest('room:newIsland');
+        return;
+      }
       const { playerConfigs } = get();
       if (playerConfigs) get().startGame(playerConfigs);
     },

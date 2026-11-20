@@ -101,6 +101,7 @@ export interface ClientToServerEvents {
   'room:addBot': (req: { level: AILevel }, ack: Ack) => void;
   'room:removeSeat': (req: { seat: number }, ack: Ack) => void;
   'room:start': (ack: Ack) => void;
+  'room:newIsland': (ack: Ack) => void;
   'game:action': (action: GameAction, ack: Ack) => void;
 }
 

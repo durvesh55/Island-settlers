@@ -124,6 +124,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     socket.on('room:addBot', (req, ack) => withRoom(ack, (token, room) => room.addBot(token, req?.level)));
     socket.on('room:removeSeat', (req, ack) => withRoom(ack, (token, room) => room.removeSeat(token, req?.seat)));
     socket.on('room:start', (ack) => withRoom(ack, (token, room) => room.start(token)));
+    socket.on('room:newIsland', (ack) => withRoom(ack, (token, room) => room.newIsland(token)));
     socket.on('game:action', (action, ack) => withRoom(ack, (token, room) => room.act(token, action)));
 
     socket.on('disconnect', () => {
