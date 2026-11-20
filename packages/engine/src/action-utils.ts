@@ -1,4 +1,4 @@
-import { BUILD_COSTS, RESOURCES, VICTORY_POINTS_TO_WIN, type BuildKind } from './constants';
+import { BUILD_COSTS, RESOURCE_NAME, RESOURCES, VICTORY_POINTS_TO_WIN, type BuildKind } from './constants';
 import type { ActionResult, GameEvent } from './action-types';
 import { emptyBundle } from './resources';
 import { addLog } from './state-utils';
@@ -9,7 +9,7 @@ export const fail = (error: string): ActionResult => ({ ok: false, error });
 
 export const describe = (b: Partial<ResourceBundle>) =>
   RESOURCES.filter((r) => (b[r] ?? 0) > 0)
-    .map((r) => `${b[r]} ${r}`)
+    .map((r) => `${b[r]} ${RESOURCE_NAME[r]}`)
     .join(', ');
 
 /** Validate and normalise a user-supplied partial bundle (non-negative integers only). */
@@ -23,7 +23,7 @@ export function toBundle(input: Partial<ResourceBundle> | undefined): ResourceBu
   return out;
 }
 
-/** Move a building cost from the player's hand to the bank (mutates `s`). */
+/** Move a building cost from the player's hand to the supply (mutates `s`). */
 export function payCost(s: GameState, player: number, kind: BuildKind): void {
   const cost = BUILD_COSTS[kind];
   const p = s.players[player];

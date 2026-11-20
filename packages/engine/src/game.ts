@@ -1,10 +1,11 @@
 import {
-  BANK_RESOURCE_COUNT,
+  BOARD_RULES,
+  boardSizeFor,
   DEV_CARD_TYPES,
-  DEV_DECK_COUNTS,
   MAX_PLAYERS,
   MIN_PLAYERS,
   PIECE_LIMITS,
+  usesPairedTurns,
   type AILevel,
   type DevCardType,
   type PlayerColor,
@@ -58,10 +59,12 @@ export function createGame(config: GameConfig): GameState {
   }
 
   const seed = config.seed ?? randomSeed();
-  const board = generateBoard(seed);
+  const size = boardSizeFor(players.length);
+  const rules = BOARD_RULES[size];
+  const board = generateBoard(seed, size);
   const rng = new Rng((seed ^ 0x9e3779b9) >>> 0);
   const devDeck = rng.shuffle(
-    DEV_CARD_TYPES.flatMap((t) => Array<DevCardType>(DEV_DECK_COUNTS[t]).fill(t)),
+    DEV_CARD_TYPES.flatMap((t) => Array<DevCardType>(rules.devDeck[t]).fill(t)),
   );
 
   const statePlayers: Player[] = players.map((p, id) => ({
@@ -103,7 +106,7 @@ export function createGame(config: GameConfig): GameState {
     buildings: {},
     roads: {},
     robberHex: desertHex(board).id,
-    bank: emptyBundle(BANK_RESOURCE_COUNT),
+    bank: emptyBundle(rules.supplyPerResource),
     devDeck,
     dice: null,
     pendingDiscards: {},
@@ -114,6 +117,9 @@ export function createGame(config: GameConfig): GameState {
     tradeOffer: null,
     tradeSeq: 0,
     turn: 0,
+    paired: usesPairedTurns(players.length),
+    turnLeader: order[0],
+    pairedTurn: false,
     rngState: rng.state,
     log: [
       { id: 0, text: 'A new island rises from the sea. Setup begins!', player: null },

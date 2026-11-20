@@ -1,6 +1,6 @@
 import { viewerId } from '../../lib/viewer';
 import { AnimatePresence, motion } from 'framer-motion';
-import { devCardTotal, handSize, longestRoadLength, publicVictoryPoints, RESOURCES, type GameState, type Player } from '@island/engine';
+import { devCardTotal, handSize, longestRoadLength, pairedPartner, publicVictoryPoints, RESOURCES, type GameState, type Player } from '@island/engine';
 import { PLAYER_PALETTE } from '../../lib/colors';
 import { useGameStore } from '../../store/useGameStore';
 import { Avatar } from '../Avatar';
@@ -38,6 +38,10 @@ function GainChip({ player }: { player: number }) {
 }
 
 function PlayerPanel({ game, player, active, revealed }: { game: GameState; player: Player; active: boolean; revealed: boolean }) {
+  const compact = game.players.length > 4;
+  const leader = game.paired && game.phase !== 'setup' ? (game.turnLeader ?? game.currentPlayer) : null;
+  const partner = leader === null ? null : pairedPartner(game, leader);
+  const marker = leader === player.id ? '1' : partner === player.id ? '2' : null;
   const pal = PLAYER_PALETTE[player.color];
   const vp = publicVictoryPoints(game, player.id);
   const devCount = devCardTotal(player);
@@ -49,7 +53,7 @@ function PlayerPanel({ game, player, active, revealed }: { game: GameState; play
       initial={{ opacity: 0, x: 40 }}
       animate={{ opacity: 1, x: 0, scale: active ? 1 : 0.975 }}
       transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-      className="relative shrink-0 overflow-hidden rounded-xl border-2 px-2.5 py-2"
+      className={`relative shrink-0 overflow-hidden rounded-xl border-2 px-2.5 ${compact ? 'py-1.5' : 'py-2'}`}
       style={{
         borderColor: active ? pal.accent : `${pal.accent}70`,
         background: `linear-gradient(135deg, ${pal.panelFrom} 0%, ${pal.panelTo} 100%)`,
@@ -66,12 +70,20 @@ function PlayerPanel({ game, player, active, revealed }: { game: GameState; play
       )}
       <GainChip player={player.id} />
       <div className="relative flex items-center gap-3">
-        <Avatar index={player.avatar} ring={pal.accent} size={48} />
+        <Avatar index={player.avatar} ring={pal.accent} size={compact ? 38 : 48} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
             <span className="truncate font-display text-[17px] leading-tight text-parchment-50">
               {player.name}
               {player.isAI && <span className="ml-1 text-xs text-parchment-300/70">(AI)</span>}
+              {marker && (
+                <span
+                  className="ml-1.5 inline-grid h-5 w-5 place-items-center rounded-full bg-gold-500 align-middle font-display text-xs text-wood-900"
+                  title={marker === '1' ? 'Player 1 marker — rolls the dice this round' : 'Player 2 marker — takes an extra Action phase after Player 1'}
+                >
+                  {marker}
+                </span>
+              )}
             </span>
             <span className="flex shrink-0 items-center gap-1 font-display text-[17px] text-gold-300" title="Victory points">
               <CrownIcon width={16} height={16} />
@@ -114,7 +126,7 @@ function PlayerPanel({ game, player, active, revealed }: { game: GameState; play
         <span className="flex items-center gap-1.5">
           <span
             className={`flex items-center gap-0.5 rounded px-1 ${longest ? 'bg-gold-500/30 text-gold-300' : 'opacity-40'}`}
-            title={(longest ? 'Holds Longest Road (+2 VP)' : 'Longest Road — not held') + ' · longest road: ' + longestRoadLength(game, player.id) + ' segments (5 needed)'}
+            title={(longest ? 'Holds Longest Route (+2 VP)' : 'Longest Route — not held') + ' · longest route: ' + longestRoadLength(game, player.id) + ' segments (5 needed)'}
           >
             <RoadIcon width={12} height={12} />
             {longestRoadLength(game, player.id)}
@@ -135,7 +147,7 @@ function PlayerPanel({ game, player, active, revealed }: { game: GameState; play
 export function PlayerPanels({ game }: { game: GameState }) {
   const revealHands = useGameStore((s) => s.settings.revealHands);
   return (
-    <div className="flex flex-col gap-2">
+    <div className={`flex flex-col ${game.players.length > 4 ? 'gap-1.5' : 'gap-2'}`}>
       {game.players.map((p) => (
         <PlayerPanel
           key={p.id}

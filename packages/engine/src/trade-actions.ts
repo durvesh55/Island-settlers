@@ -1,4 +1,4 @@
-import { RESOURCES, type Resource } from './constants';
+import { RESOURCE_NAME, RESOURCES, type Resource } from './constants';
 import type { ActionResult } from './action-types';
 import { describe, fail, toBundle } from './action-utils';
 import { canAfford, totalCards } from './resources';
@@ -25,8 +25,8 @@ export function maritimeTrade(state: GameState, player: number, give: Resource, 
   if (!Number.isInteger(amount) || amount < 1) return fail('Choose how many cards to receive');
   const ratio = tradeRatios(state, player)[give];
   const cost = ratio * amount;
-  if (state.players[player].resources[give] < cost) return fail(`You need ${cost} ${give} for that trade (${ratio}:1)`);
-  if (state.bank[receive] < amount) return fail(`The bank only has ${state.bank[receive]} ${receive} left`);
+  if (state.players[player].resources[give] < cost) return fail(`You need ${cost} ${RESOURCE_NAME[give]} for that trade (${ratio}:1)`);
+  if (state.bank[receive] < amount) return fail(`The supply only has ${state.bank[receive]} ${RESOURCE_NAME[receive]} left`);
 
   const s = cloneState(state);
   const p = s.players[player];
@@ -34,7 +34,7 @@ export function maritimeTrade(state: GameState, player: number, give: Resource, 
   s.bank[give] += cost;
   p.resources[receive] += amount;
   s.bank[receive] -= amount;
-  addLog(s, `${p.name} traded ${cost} ${give} to the bank for ${amount} ${receive} (${ratio}:1).`, player);
+  addLog(s, `${p.name} traded ${cost} ${RESOURCE_NAME[give]} to the supply for ${amount} ${RESOURCE_NAME[receive]} (${ratio}:1).`, player);
   return { ok: true, state: s, events: [{ type: 'maritimeTrade', player, give, gave: cost, receive, received: amount }] };
 }
 
@@ -48,6 +48,7 @@ function validOfferBundles(give: ResourceBundle | null, want: ResourceBundle | n
 export function proposeTrade(state: GameState, player: number, giveIn: Partial<ResourceBundle>, wantIn: Partial<ResourceBundle>): ActionResult {
   const err = tradeWindow(state);
   if (err) return fail(err);
+  if (state.pairedTurn) return fail('Player 2 may not trade with other players (only with the supply)');
   const give = toBundle(giveIn);
   const want = toBundle(wantIn);
   const bad = validOfferBundles(give, want);

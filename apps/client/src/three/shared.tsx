@@ -9,6 +9,104 @@ export const PIECE_BASE = 0.18;
 export const SEA_RADIUS = 6.35;
 export const FRAME_OUTER = 6.95;
 
+/* ───────────── Board outline (sea + frame) ───────────── */
+
+export interface P2 {
+  x: number;
+  z: number;
+}
+
+/** Convex hull (counter-clockwise) of points in the x/z plane — Andrew's monotone chain. */
+export function convexHull(points: P2[]): P2[] {
+  const pts = [...points].sort((a, b) => a.x - b.x || a.z - b.z);
+  const cross = (o: P2, a: P2, b: P2) => (a.x - o.x) * (b.z - o.z) - (a.z - o.z) * (b.x - o.x);
+  const build = (list: P2[]) => {
+    const out: P2[] = [];
+    for (const p of list) {
+      while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], p) <= 1e-9) out.pop();
+      out.push(p);
+    }
+    out.pop();
+    return out;
+  };
+  return [...build(pts), ...build([...pts].reverse())];
+}
+
+/** Push every side of a convex polygon outwards by `d` (mitred corners). */
+export function offsetConvex(poly: P2[], d: number): P2[] {
+  const n = poly.length;
+  const c = poly.reduce((a, p) => ({ x: a.x + p.x / n, z: a.z + p.z / n }), { x: 0, z: 0 });
+  const normal = (a: P2, b: P2) => {
+    const ex = b.x - a.x;
+    const ez = b.z - a.z;
+    const len = Math.hypot(ex, ez) || 1;
+    let nx = ez / len;
+    let nz = -ex / len;
+    if (nx * ((a.x + b.x) / 2 - c.x) + nz * ((a.z + b.z) / 2 - c.z) < 0) {
+      nx = -nx;
+      nz = -nz;
+    }
+    return { x: nx, z: nz };
+  };
+  return poly.map((v, i) => {
+    const n1 = normal(poly[(i - 1 + n) % n], v);
+    const n2 = normal(v, poly[(i + 1) % n]);
+    const k = d / (1 + n1.x * n2.x + n1.z * n2.z);
+    return { x: v.x + (n1.x + n2.x) * k, z: v.z + (n1.z + n2.z) * k };
+  });
+}
+
+export function insideConvex(poly: P2[], p: P2): boolean {
+  let sign = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i];
+    const b = poly[(i + 1) % poly.length];
+    const cr = (b.x - a.x) * (p.z - a.z) - (b.z - a.z) * (p.x - a.x);
+    if (Math.abs(cr) < 1e-12) continue;
+    if (sign === 0) sign = Math.sign(cr);
+    else if (Math.sign(cr) !== sign) return false;
+  }
+  return true;
+}
+
+export interface BoardExtent {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+/** Bounding box of the island's corners (board space; y is the table's z axis). */
+export function boardExtent(board: { vertices: { x: number; y: number }[] }): BoardExtent {
+  const xs = board.vertices.map((v) => v.x);
+  const ys = board.vertices.map((v) => v.y);
+  return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
+}
+
+export interface SeaShape {
+  /** Sea surface polygon (x, z). */
+  sea: P2[];
+  /** Outer edge of the wooden frame. */
+  frame: P2[];
+  /** Island outline (convex hull of the corners). */
+  hull: P2[];
+  /** Size relative to the standard board's frame, for shading the water. */
+  scale: number;
+}
+
+const hexOutline = (r: number): P2[] =>
+  Array.from({ length: 6 }, (_, i) => ({ x: Math.cos((i * Math.PI) / 3) * r, z: Math.sin((i * Math.PI) / 3) * r }));
+
+/** The standard 19-hex island sits in a regular hexagonal frame; the 5–6 player island gets a frame that wraps its outline. */
+export function seaShape(board: { size?: string; vertices: { x: number; y: number }[] }): SeaShape {
+  const hull = convexHull(board.vertices.map((v) => ({ x: v.x, z: v.y })));
+  if (board.size !== 'large') return { sea: hexOutline(SEA_RADIUS + 0.05), frame: hexOutline(FRAME_OUTER), hull, scale: 1 };
+  const sea = offsetConvex(hull, 1.75);
+  const frame = offsetConvex(hull, 2.35);
+  const radius = Math.max(...frame.map((p) => Math.hypot(p.x, p.z)));
+  return { sea, frame, hull, scale: radius / FRAME_OUTER };
+}
+
 export interface InstanceItem {
   x: number;
   y: number;

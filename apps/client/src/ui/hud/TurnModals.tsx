@@ -64,7 +64,7 @@ function DiscardDialog({ game, player, required }: { game: GameState; player: nu
           </p>
         </div>
       </div>
-      <p className="mt-2 text-sm text-parchment-300/80">Pass the device to {p.name} if needed. Choose which cards to return to the bank.</p>
+      <p className="mt-2 text-sm text-parchment-300/80">Pass the device to {p.name} if needed. Choose which cards to return to the supply.</p>
       <div className="mt-4 grid grid-cols-5 gap-2">
         {RESOURCES.map((r) => (
           <div key={r} className="flex flex-col items-center gap-1 rounded-lg bg-black/25 p-2">

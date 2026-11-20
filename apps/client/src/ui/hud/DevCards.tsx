@@ -66,7 +66,7 @@ export function DevHand({ game }: { game: GameState }) {
   };
 
   if (groups.length === 0) {
-    return <p className="self-center text-sm text-parchment-300/70">No cards yet. Buy them for 1 wool, 1 grain and 1 ore.</p>;
+    return <p className="self-center text-sm text-parchment-300/70">No cards yet. Buy them for 1 wool, 1 wheat and 1 ore.</p>;
   }
   return (
     <div className="flex flex-wrap gap-2">
@@ -123,7 +123,7 @@ export function DevCardDialog({ game }: { game: GameState }) {
           <div>
             <h2 className="font-display text-2xl text-parchment-50">{DEV_CARD_INFO[dialog].name}</h2>
             <p className="text-sm text-parchment-300/80">
-              {yop ? `Choose 2 resources from the bank (${picks.length}/2 chosen${picks[0] ? `: ${RESOURCE_LABEL[picks[0]]}` : ''}).` : 'Name a resource — every other player hands you all of theirs.'}
+              {yop ? `Choose 2 resources from the supply (${picks.length}/2 chosen${picks[0] ? `: ${RESOURCE_LABEL[picks[0]]}` : ''}).` : 'Name a resource — every other player hands you all of theirs.'}
             </p>
           </div>
           <button onClick={close} className="text-parchment-200 hover:text-gold-300" aria-label="Cancel">

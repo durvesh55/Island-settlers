@@ -42,7 +42,7 @@ function promptFor(game: GameState, buildMode: BuildMode | null, rolling: boolea
     case 'roll':
       return { title: `${p.name}, roll the dice`, detail: 'Every hex showing the total produces for adjacent settlements and cities.' };
     case 'discard':
-      return { title: 'A 7! Discard time', detail: 'Players holding more than 7 cards return half to the bank.' };
+      return { title: 'A 7! Discard time', detail: 'Players holding more than 7 cards return half to the supply.' };
     case 'moveRobber':
       return { title: `${p.name}, move the robber`, detail: 'Click any other hex. It stops producing, and you may rob a neighbour.' };
     case 'steal':
@@ -51,6 +51,11 @@ function promptFor(game: GameState, buildMode: BuildMode | null, rolling: boolea
       return { title: `Road Building — ${game.freeRoads} free road${game.freeRoads === 1 ? '' : 's'} left`, detail: 'Choose a glowing edge connected to your network.' };
     case 'main':
       if (buildMode) return BUILD_PROMPT[buildMode];
+      if (game.pairedTurn)
+        return {
+          title: `${possessive(p.name)} paired Action phase`,
+          detail: 'Player 2 of the pair: build, trade with the supply and play a card — but no dice and no trading with players. End turn (E) passes the dice left.',
+        };
       return { title: `${possessive(p.name)} turn`, detail: 'Trade (T), build (1–3), buy a card (4), play a card, then end your turn (E).' };
     case 'gameOver':
       return { title: `${game.players[game.winner!].name} wins!`, detail: '' };

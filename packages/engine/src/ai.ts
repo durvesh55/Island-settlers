@@ -408,6 +408,7 @@ function maritimeFor(ctx: Ctx, goal: Goal): GameAction | null {
 
 function domesticOffer(ctx: Ctx, goal: Goal): GameAction | null {
   const { state, player } = ctx;
+  if (state.pairedTurn) return null; // Player 2 may not trade with other players
   if (totalCards(goal.missing) > 2) return null;
   const have = state.players[player].resources;
   const need = BUILD_COSTS[goal.kind];

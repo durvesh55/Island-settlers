@@ -16,13 +16,15 @@ export const PLAYER_PALETTE: Record<PlayerColor, PlayerPalette> = {
   blue: { piece: '#2a63c4', accent: '#4a8cf0', panelFrom: '#132f62', panelTo: '#0a1730', label: 'Blue' },
   yellow: { piece: '#e9b21f', accent: '#f5c842', panelFrom: '#5c4210', panelTo: '#2b1f08', label: 'Yellow' },
   green: { piece: '#2f9a3a', accent: '#4cc35a', panelFrom: '#164a1c', panelTo: '#0a240d', label: 'Green' },
+  orange: { piece: '#e8761c', accent: '#ff9a45', panelFrom: '#6a3008', panelTo: '#301503', label: 'Orange' },
+  purple: { piece: '#8a46c4', accent: '#b57af0', panelFrom: '#3e1a62', panelTo: '#1c0b30', label: 'Purple' },
 };
 
 export const RESOURCE_LABEL: Record<Resource, string> = {
   wood: 'Wood',
   brick: 'Brick',
   wool: 'Wool',
-  grain: 'Grain',
+  grain: 'Wheat',
   ore: 'Ore',
 };
 

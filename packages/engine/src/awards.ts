@@ -60,8 +60,8 @@ export function updateLongestRoad(s: GameState, events: GameEvent[]): void {
   if (next === prev) return;
   s.longestRoadHolder = next;
   events.push({ type: 'longestRoadChanged', from: prev, to: next, length: next === null ? 0 : lengths[next] });
-  if (next !== null) addLog(s, `${s.players[next].name} now holds the Longest Road (${lengths[next]} segments, +2 VP).`, next);
-  else addLog(s, 'The Longest Road card is set aside — no single player has the longest road.');
+  if (next !== null) addLog(s, `${s.players[next].name} now holds the Longest Route (${lengths[next]} segments, +2 VP).`, next);
+  else addLog(s, 'The Longest Route tile is set aside — no single player has the longest route.');
 }
 
 /** The first player with 3 knights takes Largest Army; afterwards only strictly more knights take it over. */

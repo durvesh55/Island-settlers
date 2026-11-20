@@ -9,7 +9,7 @@ import { defaultPlayers, PlayerSetup } from './screens/PlayerSetup';
 import { SettingsModal, Toasts } from './ui/Overlays';
 
 /**
- * Dev/testing shortcut: `?quick=4&seed=123&auto=6` starts a local game immediately
+ * Dev/testing shortcut: `?quick=4&seed=123&auto=6` (quick=3…6 players) starts a local game immediately
  * and performs `auto` random legal setup placements through the normal engine path.
  * `&ai=3` makes the last 3 seats computer players (`ai=4` watches computers play each other).
  */
@@ -22,7 +22,7 @@ function useQuickStart() {
     if (!quick || quickStarted) return;
     quickStarted = true;
     const store = useGameStore.getState();
-    const count = quick === '3' ? 3 : 4;
+    const count = Math.min(6, Math.max(3, Number(quick) || 4));
     const ai = Math.max(0, Math.min(count, Number(params.get('ai') ?? 0)));
     store.setMode(ai > 0 ? 'single' : 'local');
     const seed = params.get('seed');

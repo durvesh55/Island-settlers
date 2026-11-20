@@ -1,4 +1,4 @@
-import { BUILD_COSTS, RESOURCES, type Resource } from './constants';
+import { BUILD_COSTS, RESOURCE_NAME, RESOURCES, type Resource } from './constants';
 import type { ActionResult, GameAction, GameEvent } from './action-types';
 import { checkWin, describe, fail, payCost } from './action-utils';
 import { updateLongestRoad } from './awards';
@@ -81,6 +81,8 @@ function placeSetupRoad(state: GameState, player: number, edge: number): ActionR
     s.phase = 'roll';
     s.turn = 1;
     s.currentPlayer = setup.order[0];
+    s.turnLeader = setup.order[0];
+    s.pairedTurn = false;
     events.push({ type: 'setupComplete' });
     addLog(s, `Setup complete. ${s.players[s.currentPlayer].name} takes the first turn.`);
   } else {
@@ -140,7 +142,7 @@ function resolveRoll(s: GameState, player: number, dice: [number, number]): Acti
     if (totalCards(g) > 0) addLog(s, `${p.name} collected ${describe(g)}.`, pid);
   });
   if (prod.blockedHexes.length) addLog(s, 'The robber blocked production on one hex.');
-  if (prod.shortages.length) addLog(s, `The bank ran short of ${prod.shortages.join(', ')}.`);
+  if (prod.shortages.length) addLog(s, `The supply ran short of ${prod.shortages.map((r) => RESOURCE_NAME[r]).join(', ')}.`);
   if (prod.gains.every((g) => totalCards(g) === 0)) addLog(s, 'Nothing was produced.');
   events.push({ type: 'produced', gains: prod.gains, hexes: prod.hexes, blockedHexes: prod.blockedHexes, shortages: prod.shortages });
   s.phase = 'main';
@@ -277,7 +279,7 @@ function buildSettlement(state: GameState, player: number, vertex: number): Acti
   if (err) return fail(err);
   const p = state.players[player];
   if (p.settlementsLeft <= 0) return fail('You have no settlements left — upgrade one to a city');
-  if (!canAfford(p.resources, BUILD_COSTS.settlement)) return fail('A settlement costs 1 wood, 1 brick, 1 wool and 1 grain');
+  if (!canAfford(p.resources, BUILD_COSTS.settlement)) return fail('A settlement costs 1 wood, 1 brick, 1 wool and 1 wheat');
   if (!state.board.vertices[vertex]) return fail('That corner does not exist');
   if (!satisfiesDistanceRule(state, vertex)) return fail('Too close to another settlement (distance rule)');
   if (!canBuildSettlementAt(state, player, vertex)) return fail('Settlements must be placed on one of your roads');
@@ -297,7 +299,7 @@ function buildCity(state: GameState, player: number, vertex: number): ActionResu
   if (err) return fail(err);
   const p = state.players[player];
   if (p.citiesLeft <= 0) return fail('You have no cities left (4 maximum)');
-  if (!canAfford(p.resources, BUILD_COSTS.city)) return fail('A city costs 2 grain and 3 ore');
+  if (!canAfford(p.resources, BUILD_COSTS.city)) return fail('A city costs 2 wheat and 3 ore');
   if (!canBuildCityAt(state, player, vertex)) return fail('Cities must replace one of your own settlements');
   const s = cloneState(state);
   payCost(s, player, 'city');
@@ -311,23 +313,42 @@ function buildCity(state: GameState, player: number, vertex: number): ActionResu
   return { ok: true, state: s, events };
 }
 
+/** Player 2 of the paired players rule: the third player to the left of Player 1. */
+export function pairedPartner(state: GameState, leader: number = state.turnLeader ?? state.currentPlayer): number {
+  return (leader + 3) % state.players.length;
+}
+
 function endTurn(state: GameState, player: number): ActionResult {
   if (state.phase === 'roll') return fail('Roll the dice before ending your turn');
   if (state.phase !== 'main') return fail('Finish the current step before ending your turn');
   const s = cloneState(state);
   const p = s.players[player];
-  p.devCards.push(...p.newDevCards); // cards bought this turn become playable next turn
+  p.devCards.push(...p.newDevCards); // cards bought this turn become playable on your next Action phase
   p.newDevCards = [];
-  const next = (player + 1) % s.players.length;
+  const leader = s.turnLeader ?? player;
+  let next: number;
+  if (s.paired && !s.pairedTurn) {
+    // 5–6 players: Player 1 is done — Player 2 now takes an Action phase (no dice, no trading with players).
+    next = pairedPartner(s, leader);
+    s.turnLeader = leader;
+    s.pairedTurn = true;
+    s.phase = 'main';
+  } else {
+    // Pass the dice (and the Player 1 / Player 2 markers) to the left.
+    next = (leader + 1) % s.players.length;
+    s.turnLeader = next;
+    s.pairedTurn = false;
+    s.phase = 'roll';
+  }
   s.currentPlayer = next;
-  s.phase = 'roll';
   s.resumePhase = 'main';
   s.devCardPlayedThisTurn = false;
   s.tradeOffer = null;
   s.turn++;
   addLog(s, `${p.name} ended their turn.`, player);
+  if (s.pairedTurn) addLog(s, `${s.players[next].name} (Player 2) takes an Action phase — no dice roll and no trading with other players.`, next);
   const events: GameEvent[] = [{ type: 'turnEnded', player, next }];
-  // Official rule: points reached off-turn (e.g. a Longest Road change) are claimed on your own turn.
+  // Official rule: points reached off-turn (e.g. a Longest Route change) are claimed on your own turn.
   checkWin(s, events);
   return { ok: true, state: s, events };
 }

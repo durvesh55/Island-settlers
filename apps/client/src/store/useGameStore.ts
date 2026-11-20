@@ -238,7 +238,7 @@ export const useGameStore = create<StoreState>((set, get) => {
           break;
         case 'maritimeTrade':
           playSound('collect');
-          if (next.players[e.player].isAI) get().pushToast(next.players[e.player].name + ' traded ' + e.gave + ' ' + e.give + ' with the bank for ' + e.received + ' ' + e.receive + '.', 'info');
+          if (next.players[e.player].isAI) get().pushToast(next.players[e.player].name + ' traded ' + e.gave + ' ' + e.give + ' with the supply for ' + e.received + ' ' + e.receive + '.', 'info');
           break;
         case 'tradeCompleted':
           playSound('collect');
@@ -250,7 +250,7 @@ export const useGameStore = create<StoreState>((set, get) => {
           break;
         }
         case 'longestRoadChanged':
-          get().pushToast(e.to === null ? 'The Longest Road card is set aside.' : next.players[e.to].name + ' takes the Longest Road (' + e.length + ' segments, +2 VP)!', 'success');
+          get().pushToast(e.to === null ? 'The Longest Route tile is set aside.' : next.players[e.to].name + ' takes the Longest Route (' + e.length + ' segments, +2 VP)!', 'success');
           playSound('turn');
           break;
         case 'largestArmyChanged':

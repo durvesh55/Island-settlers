@@ -95,6 +95,13 @@ describe('lobby', () => {
     await until(() => c.lobby?.seats.length === 4);
     expect(c.lobby!.seats[3]).toMatchObject({ isAI: true, aiLevel: 'hard', connected: true });
 
+    // up to six seats now (5–6 player extension); the room is full after two more
+    expect((await call(a, 'room:addBot', { level: 'easy' })).ok).toBe(true);
+    expect((await call(a, 'room:addBot', { level: 'easy' })).ok).toBe(true);
+    await until(() => c.lobby?.seats.length === 6);
+    expect(new Set(c.lobby!.seats.map((x) => x.color)).size).toBe(6);
+    expect(await call(a, 'room:addBot', { level: 'easy' })).toMatchObject({ ok: false, error: expect.stringMatching(/full/) });
+
     const late = await client(s);
     expect(await call(late, 'room:join', { code: a.lobby!.code, name: 'Dev' })).toMatchObject({ ok: false, error: expect.stringMatching(/full/) });
     expect(await call(late, 'room:join', { code: 'ZZZZZ', name: 'Dev' })).toMatchObject({ ok: false, error: expect.stringMatching(/No room/) });

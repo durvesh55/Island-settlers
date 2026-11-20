@@ -7,9 +7,9 @@ import { useGameStore, type GameMode } from '../store/useGameStore';
 import { Avatar, AVATAR_COUNT } from '../ui/Avatar';
 import { BackIcon, PlayIcon } from '../ui/icons';
 
-const DEFAULT_NAMES = ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
+const DEFAULT_NAMES = ['Player 1', 'Player 2', 'Player 3', 'Player 4', 'Player 5', 'Player 6'];
 /** Names for computer settlers (seat 0 is normally the human). */
-const AI_NAMES = ['Ottilie', 'Maren', 'Tobin', 'Sela'];
+const AI_NAMES = ['Ottilie', 'Maren', 'Tobin', 'Sela', 'Ines', 'Bram'];
 
 const LEVEL_LABEL: Record<AILevel, string> = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
 
@@ -57,7 +57,7 @@ export function PlayerSetup() {
   };
 
   const setCount = (n: number) =>
-    setPlayers((ps) => (n < ps.length ? ps.slice(0, n) : [...ps, ...defaultPlayers(4, mode).slice(ps.length, n).map((p) => ({ ...p, color: PLAYER_COLORS.find((c) => !ps.some((q) => q.color === c))! }))]));
+    setPlayers((ps) => (n < ps.length ? ps.slice(0, n) : [...ps, ...defaultPlayers(6, mode).slice(ps.length, n).map((p) => ({ ...p, color: PLAYER_COLORS.find((c) => !ps.some((q) => q.color === c))! }))]));
 
   const start = () => {
     if (noHuman) {
@@ -88,7 +88,7 @@ export function PlayerSetup() {
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-4xl text-parchment-50">Gather your settlers</h1>
           <div className="flex rounded-lg border border-gold-600/40 bg-black/30 p-1">
-            {[3, 4].map((n) => (
+            {[3, 4, 5, 6].map((n) => (
               <button
                 key={n}
                 onClick={() => setCount(n)}
@@ -100,6 +100,12 @@ export function PlayerSetup() {
           </div>
         </div>
 
+        {players.length > 4 && (
+          <p className="mb-3 rounded-lg border border-gold-600/40 bg-gold-500/10 px-3 py-2 text-sm text-parchment-100">
+            <b>5–6 player game:</b> a bigger 30-hex island, and the <b>paired players</b> rule — after each turn, the third player to the left takes an extra Action phase (build and
+            play a card, but no dice and no trading with other players).
+          </p>
+        )}
         <ul className="space-y-3">
           {players.map((p, i) => {
             const pal = PLAYER_PALETTE[p.color];

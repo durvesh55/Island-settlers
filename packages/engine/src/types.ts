@@ -1,4 +1,4 @@
-import type { AILevel, DevCardType, HarborType, PlayerColor, Resource, Terrain } from './constants';
+import type { AILevel, BoardSize, DevCardType, HarborType, PlayerColor, Resource, Terrain } from './constants';
 
 export type ResourceBundle = Record<Resource, number>;
 
@@ -57,6 +57,8 @@ export interface Harbor {
 
 export interface Board {
   seed: number;
+  /** 'large' is the 30-hex island of the 5–6 player extension; missing in older saves (= standard). */
+  size?: BoardSize;
   hexes: HexTile[];
   vertices: Vertex[];
   edges: Edge[];
@@ -156,6 +158,15 @@ export interface GameState {
   tradeOffer: TradeOffer | null;
   tradeSeq: number;
   turn: number;
+  /**
+   * 5–6 player paired-players rule: after Player 1's turn, the third player to their left (Player 2)
+   * takes an extra Action phase. Missing in older saves (= off).
+   */
+  paired?: boolean;
+  /** Player 1 of the current round — the player who rolls the dice. */
+  turnLeader?: number;
+  /** True while Player 2 is taking their Action phase (no roll, no trading with other players). */
+  pairedTurn?: boolean;
   rngState: number;
   log: LogEntry[];
   winner: number | null;

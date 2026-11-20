@@ -14,6 +14,8 @@ import { CostList } from '../ResourceIcon';
 import { RulesContent } from '../RulesContent';
 import { DevHand } from './DevCards';
 import { TradePanel } from './TradePanel';
+import { BuildMenu } from './BuildMenu';
+import { possessive } from '../../lib/text';
 
 const TITLES: Record<Panel, string> = {
   game: 'Game',
@@ -118,6 +120,7 @@ function GamePanel({ game }: { game: GameState }) {
 
 function BuildPanel({ game }: { game: GameState }) {
   const player = game.players[game.currentPlayer];
+  const closePanel = useGameStore((s) => s.closePanel);
   const rows = [
     { label: 'Road', cost: BUILD_COSTS.road, left: player.roadsLeft, max: PIECE_LIMITS.roads, note: 'Must connect to your road, settlement or city.' },
     { label: 'Settlement', cost: BUILD_COSTS.settlement, left: player.settlementsLeft, max: PIECE_LIMITS.settlements, note: 'On your road network, 2+ edges from any building.' },
@@ -125,7 +128,10 @@ function BuildPanel({ game }: { game: GameState }) {
   ];
   return (
     <>
-      <Section title={`${player.name}'s pieces`}>
+      <div className="mb-5">
+        <BuildMenu game={game} onPicked={closePanel} />
+      </div>
+      <Section title={`${possessive(player.name)} pieces`}>
         <ul className="space-y-3">
           {rows.map((r) => (
             <li key={r.label} className="rounded-lg bg-black/25 p-3">
@@ -146,7 +152,7 @@ function BuildPanel({ game }: { game: GameState }) {
           ))}
         </ul>
       </Section>
-      <PhaseNote>After rolling, pick Road, Settlement or City in the Build menu (or press 1–3), then click a glowing spot. Every placement is validated by the game engine.</PhaseNote>
+      <PhaseNote>After rolling, pick Road, Settlement or City above (or press 1–3), then click a glowing spot on the island. Esc cancels.</PhaseNote>
     </>
   );
 }

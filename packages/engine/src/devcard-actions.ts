@@ -1,4 +1,4 @@
-import { BUILD_COSTS, RESOURCES, type DevCardType, type Resource } from './constants';
+import { BUILD_COSTS, RESOURCE_NAME, RESOURCES, type DevCardType, type Resource } from './constants';
 import type { ActionResult, GameEvent } from './action-types';
 import { checkWin, fail, payCost } from './action-utils';
 import { updateLargestArmy } from './awards';
@@ -10,7 +10,7 @@ import type { GameState } from './types';
 const CARD_NAME: Record<DevCardType, string> = {
   knight: 'Knight',
   roadBuilding: 'Road Building',
-  yearOfPlenty: 'Year of Plenty',
+  yearOfPlenty: 'Invention',
   monopoly: 'Monopoly',
   victoryPoint: 'Victory Point',
 };
@@ -19,7 +19,7 @@ export function buyDevCard(state: GameState, player: number): ActionResult {
   if (state.phase === 'roll') return fail('Roll the dice first');
   if (state.phase !== 'main') return fail('You cannot buy a development card right now');
   if (state.devDeck.length === 0) return fail('The development card deck is empty');
-  if (!canAfford(state.players[player].resources, BUILD_COSTS.devCard)) return fail('A development card costs 1 wool, 1 grain and 1 ore');
+  if (!canAfford(state.players[player].resources, BUILD_COSTS.devCard)) return fail('A development card costs 1 wool, 1 wheat and 1 ore');
   const s = cloneState(state);
   payCost(s, player, 'devCard');
   const card = s.devDeck.pop()!;
@@ -81,14 +81,14 @@ export function playYearOfPlenty(state: GameState, player: number, resources: [R
   }
   const need: Partial<Record<Resource, number>> = {};
   for (const r of resources) need[r] = (need[r] ?? 0) + 1;
-  for (const r of RESOURCES) if ((need[r] ?? 0) > state.bank[r]) return fail(`The bank doesn't have enough ${r}`);
+  for (const r of RESOURCES) if ((need[r] ?? 0) > state.bank[r]) return fail(`The supply doesn't have enough ${RESOURCE_NAME[r]}`);
   const s = beginPlay(state, player, 'yearOfPlenty');
   if (typeof s === 'string') return fail(s);
   for (const r of resources) {
     s.bank[r]--;
     s.players[player].resources[r]++;
   }
-  addLog(s, `${s.players[player].name} took ${resources.join(' and ')} from the bank.`, player);
+  addLog(s, `${s.players[player].name} took ${resources.map((r) => RESOURCE_NAME[r]).join(' and ')} from the supply.`, player);
   return {
     ok: true,
     state: s,
@@ -111,7 +111,7 @@ export function playMonopoly(state: GameState, player: number, resource: Resourc
   });
   const total = taken.reduce((a, b) => a + b, 0);
   s.players[player].resources[resource] += total;
-  addLog(s, `${s.players[player].name} claimed every ${resource} — ${total} card${total === 1 ? '' : 's'}.`, player);
+  addLog(s, `${s.players[player].name} claimed every ${RESOURCE_NAME[resource]} — ${total} card${total === 1 ? '' : 's'}.`, player);
   return {
     ok: true,
     state: s,

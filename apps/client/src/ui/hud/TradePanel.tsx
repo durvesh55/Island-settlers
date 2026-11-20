@@ -60,7 +60,7 @@ function MaritimeTrade({ game }: { game: GameState }) {
   const ok = give && receive && give !== receive && amount >= 1 && amount <= maxAmount;
 
   return (
-    <Section title="Bank & harbors">
+    <Section title="Supply & harbors">
       <p className="mb-2 text-xs text-parchment-300/75">Give</p>
       <div className="grid grid-cols-5 gap-1.5">
         {RESOURCES.map((r) => {
@@ -87,10 +87,10 @@ function MaritimeTrade({ game }: { game: GameState }) {
             disabled={r === give || game.bank[r] === 0}
             onClick={() => setReceive(r)}
             className={`flex flex-col items-center rounded-lg border p-1.5 transition disabled:opacity-35 ${receive === r ? 'border-gold-300 bg-gold-500/25' : 'border-gold-600/30 bg-black/25 hover:border-gold-400'}`}
-            title={`${RESOURCE_LABEL[r]} — bank holds ${game.bank[r]}`}
+            title={`${RESOURCE_LABEL[r]} — supply holds ${game.bank[r]}`}
           >
             <ResourceIcon resource={r} className="h-7 w-7" />
-            <span className="text-[10px] text-parchment-300/70">bank {game.bank[r]}</span>
+            <span className="text-[10px] text-parchment-300/70">supply {game.bank[r]}</span>
           </button>
         ))}
       </div>
@@ -140,7 +140,7 @@ function OfferBuilder({ game }: { game: GameState }) {
               <Stepper value={give[r]} max={player.resources[r]} onChange={(n) => setGive({ ...give, [r]: n })} />
             </div>
             <div className="flex justify-center">
-              <Stepper value={want[r]} max={19} onChange={(n) => setWant({ ...want, [r]: n })} />
+              <Stepper value={want[r]} max={game.board.size === 'large' ? 24 : 19} onChange={(n) => setWant({ ...want, [r]: n })} />
             </div>
           </div>
         ))}
@@ -244,7 +244,17 @@ export function TradePanel({ game }: { game: GameState }) {
           ))}
         </div>
       )}
-      <Section title="Trade with players">{game.tradeOffer ? <OpenOffer game={game} /> : <OfferBuilder game={game} />}</Section>
+      <Section title="Trade with players">
+        {game.pairedTurn ? (
+          <p className="rounded-lg border border-gold-600/30 bg-gold-500/10 px-3 py-2 text-sm text-parchment-200">
+            Paired players rule: during Player 2's Action phase you may only trade with the supply.
+          </p>
+        ) : game.tradeOffer ? (
+          <OpenOffer game={game} />
+        ) : (
+          <OfferBuilder game={game} />
+        )}
+      </Section>
     </>
   );
 }

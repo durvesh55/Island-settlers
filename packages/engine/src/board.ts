@@ -1,21 +1,32 @@
-import {
-  HARBOR_TYPES,
-  NUMBER_TOKENS,
-  TERRAIN_COUNTS,
-  TERRAIN_RESOURCE,
-  TERRAINS,
-  type Terrain,
-} from './constants';
-import { axialDistance, axialToPixel, hexCorner, hexesInRadius } from './hex';
+import { BOARD_RULES, TERRAIN_RESOURCE, TERRAINS, type BoardSize, type Terrain } from './constants';
+import { axialDistance, axialToPixel, hexCorner, hexesInRadius, SQRT3, type Axial } from './hex';
 import { Rng } from './rng';
 import type { Board, Edge, Harbor, HexTile, Vertex } from './types';
 
 const BOARD_RADIUS = 2;
 /** Gaps (in coastal edges) between consecutive harbors: 9 harbors over 30 coastal edges. */
 const HARBOR_GAPS = [3, 3, 4, 3, 3, 4, 3, 3, 4];
+/** The 5–6 player island: rows of 3, 4, 5, 6, 5, 4 and 3 hexes (30 in all). */
+const LARGE_ROWS = [3, 4, 5, 6, 5, 4, 3];
 
-function expandTerrains(): Terrain[] {
-  return TERRAINS.flatMap((t) => Array<Terrain>(TERRAIN_COUNTS[t]).fill(t));
+function expandTerrains(size: BoardSize): Terrain[] {
+  return TERRAINS.flatMap((t) => Array<Terrain>(BOARD_RULES[size].terrains[t]).fill(t));
+}
+
+/** Axial coordinates (sorted row by row) and the x shift that centres the island on the table. */
+function layout(size: BoardSize): { coords: Axial[]; shiftX: number } {
+  if (size === 'standard') {
+    return { coords: hexesInRadius(BOARD_RADIUS).sort((a, b) => a.r - b.r || a.q - b.q), shiftX: 0 };
+  }
+  const coords: Axial[] = [];
+  const mid = (LARGE_ROWS.length - 1) / 2;
+  LARGE_ROWS.forEach((width, row) => {
+    const r = row - mid;
+    // choose the first q so every row is centred on the same x (half a hex right of the origin)
+    const q0 = 0.5 - r / 2 - (width - 1) / 2;
+    for (let j = 0; j < width; j++) coords.push({ q: q0 + j, r });
+  });
+  return { coords, shiftX: SQRT3 * 0.5 };
 }
 
 function isHighNumber(n: number | null): boolean {
@@ -23,10 +34,10 @@ function isHighNumber(n: number | null): boolean {
 }
 
 /** Assign tokens so that no two red numbers (6/8) are adjacent. */
-function assignTokens(hexes: HexTile[], rng: Rng): void {
+function assignTokens(hexes: HexTile[], rng: Rng, tokenPool: readonly number[]): void {
   const productive = hexes.filter((h) => h.terrain !== 'desert');
-  for (let attempt = 0; attempt < 2000; attempt++) {
-    const tokens = rng.shuffle(NUMBER_TOKENS);
+  for (let attempt = 0; attempt < 20000; attempt++) {
+    const tokens = rng.shuffle(tokenPool);
     productive.forEach((h, i) => (h.token = tokens[i]));
     const valid = productive.every(
       (a) =>
@@ -109,13 +120,20 @@ function orderedCoast(edges: Edge[], vertices: Vertex[]): Edge[] {
   return ordered;
 }
 
-function placeHarbors(hexes: HexTile[], edges: Edge[], vertices: Vertex[], rng: Rng): Harbor[] {
+/** Spread `count` harbors around a coastline of `length` edges, as evenly as whole edges allow. */
+function harborGaps(count: number, length: number, size: BoardSize): number[] {
+  if (size === 'standard') return HARBOR_GAPS;
+  return Array.from({ length: count }, (_, i) => Math.floor(((i + 1) * length) / count) - Math.floor((i * length) / count));
+}
+
+function placeHarbors(hexes: HexTile[], edges: Edge[], vertices: Vertex[], rng: Rng, size: BoardSize): Harbor[] {
   const coast = orderedCoast(edges, vertices);
-  const types = rng.shuffle(HARBOR_TYPES);
+  const types = rng.shuffle(BOARD_RULES[size].harbors);
+  const gaps = harborGaps(types.length, coast.length, size);
   let pos = rng.int(coast.length);
   return types.map((type, id) => {
     const edge = coast[pos % coast.length];
-    pos += HARBOR_GAPS[id];
+    pos += gaps[id];
     const hex = hexes[edge.hexes[0]];
     const dx = edge.x - hex.x;
     const dy = edge.y - hex.y;
@@ -135,14 +153,15 @@ function placeHarbors(hexes: HexTile[], edges: Edge[], vertices: Vertex[], rng: 
   });
 }
 
-/** Procedurally generate a full, valid 19-hex island from a seed. */
-export function generateBoard(seed: number): Board {
+/** Procedurally generate a full, valid island from a seed: 19 hexes, or 30 for the 5–6 player extension. */
+export function generateBoard(seed: number, size: BoardSize = 'standard'): Board {
   const rng = new Rng(seed);
-  const coords = hexesInRadius(BOARD_RADIUS).sort((a, b) => a.r - b.r || a.q - b.q);
-  const terrains = rng.shuffle(expandTerrains());
+  const { coords, shiftX } = layout(size);
+  const terrains = rng.shuffle(expandTerrains(size));
 
   const hexes: HexTile[] = coords.map((c, id) => {
     const p = axialToPixel(c);
+    p.x -= shiftX;
     const terrain = terrains[id];
     return {
       id,
@@ -158,12 +177,13 @@ export function generateBoard(seed: number): Board {
     };
   });
 
-  assignTokens(hexes, rng);
+  assignTokens(hexes, rng, BOARD_RULES[size].tokens);
   const { vertices, edges } = buildGraph(hexes);
-  const harbors = placeHarbors(hexes, edges, vertices, rng);
-  return { seed, hexes, vertices, edges, harbors };
+  const harbors = placeHarbors(hexes, edges, vertices, rng, size);
+  return { seed, size, hexes, vertices, edges, harbors };
 }
 
+/** The robber starts on a desert (the first one on a board that has two). */
 export function desertHex(board: Board): HexTile {
   const desert = board.hexes.find((h) => h.terrain === 'desert');
   if (!desert) throw new Error('Board has no desert');

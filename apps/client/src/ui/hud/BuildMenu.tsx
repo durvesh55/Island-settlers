@@ -52,7 +52,8 @@ export function buildAvailability(game: GameState, kind: BuildKind): BuildAvaila
   return { ok: true, reason: 'Click, then choose a glowing spot on the island' };
 }
 
-export function BuildMenu({ game }: { game: GameState }) {
+/** `onPicked` runs after a choice is made (the Build drawer uses it to get out of the way of the board). */
+export function BuildMenu({ game, onPicked }: { game: GameState; onPicked?: () => void }) {
   const buildMode = useGameStore((s) => s.buildMode);
   const setBuildMode = useGameStore((s) => s.setBuildMode);
   const rolling = useGameStore((s) => s.rolling);
@@ -79,6 +80,7 @@ export function BuildMenu({ game }: { game: GameState }) {
                 playSound('click');
                 if (kind === 'devCard') dispatch({ type: 'BUY_DEV_CARD', player: game.currentPlayer });
                 else setBuildMode(active ? null : (kind as BuildMode));
+                if (!active) onPicked?.();
               }}
               className={`group flex flex-col items-center gap-1 rounded-lg border px-1 py-2 transition disabled:cursor-not-allowed ${
                 active

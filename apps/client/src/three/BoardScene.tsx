@@ -15,7 +15,7 @@ import { Hotspots } from './Hotspots';
 import { Pieces } from './Pieces';
 import { Robber } from './Robber';
 import { Tabletop } from './Tabletop';
-import { PIECE_BASE, TILE_TOP } from './shared';
+import { boardExtent, PIECE_BASE, TILE_TOP } from './shared';
 
 function HexTooltip({ board }: { board: Board }) {
   const hoveredHex = useGameStore((s) => s.hoveredHex);
@@ -51,7 +51,7 @@ const BASE_CAMERA: Record<'menu' | 'game', { position: Vec3; target: Vec3; fov: 
   menu: { position: [0, 12.5, 13.5], target: [0, 0, 0.6], fov: 40 },
 };
 
-function Controls({ variant }: { variant: 'menu' | 'game' }) {
+function Controls({ variant, board }: { variant: 'menu' | 'game'; board: Board }) {
   const ref = useRef<OrbitControlsImpl>(null);
   const resetSeq = useGameStore((s) => s.cameraResetSeq);
   const autoRotate = useGameStore((s) => s.settings.autoRotateMenu);
@@ -67,8 +67,11 @@ function Controls({ variant }: { variant: 'menu' | 'game' }) {
     const offset = new THREE.Vector3(...base.position).sub(target);
     const aspect = size.width / Math.max(1, size.height);
     const halfTan = Math.tan(THREE.MathUtils.degToRad(base.fov / 2));
-    const needed = (game ? 12.5 : 14) / (2 * aspect * halfTan);
-    const dist = Math.max(offset.length(), needed);
+    // the island's width plus room for harbors, frame and HUD; the 30-hex island is also much deeper
+    const ext = boardExtent(board);
+    const needed = (ext.maxX - ext.minX + (game ? 3.84 : 5.34)) / (2 * aspect * halfTan);
+    const neededDeep = (ext.maxY - ext.minY) / (board.size === 'large' ? 0.62 : 0.7) / (2 * halfTan);
+    const dist = Math.max(offset.length(), needed, neededDeep);
     camera.position.copy(target).add(offset.setLength(dist));
     if (scene.fog instanceof THREE.Fog) {
       scene.fog.near = dist + 6;
@@ -77,7 +80,7 @@ function Controls({ variant }: { variant: 'menu' | 'game' }) {
     controls.target.copy(target);
     controls.update();
     controls.saveState();
-  }, [camera, scene, size.width, size.height, base, game]);
+  }, [camera, scene, size.width, size.height, base, game, board]);
 
   useEffect(() => {
     if (resetSeq > 0) ref.current?.reset();
@@ -135,6 +138,7 @@ export function BoardCanvas({ board, game = null, variant }: SceneProps) {
   const interactive = variant === 'game';
   const robberHex = game ? board.hexes[game.robberHex] : desertHex(board);
   const camera = interactive ? BASE_CAMERA.game : BASE_CAMERA.menu;
+  const shadowHalf = board.size === 'large' ? 13 : 9;
 
   return (
     <Canvas
@@ -154,10 +158,10 @@ export function BoardCanvas({ board, game = null, variant }: SceneProps) {
         color="#ffdcaa"
         castShadow
         shadow-mapSize={[2048, 2048]}
-        shadow-camera-left={-9}
-        shadow-camera-right={9}
-        shadow-camera-top={9}
-        shadow-camera-bottom={-9}
+        shadow-camera-left={-shadowHalf}
+        shadow-camera-right={shadowHalf}
+        shadow-camera-top={shadowHalf}
+        shadow-camera-bottom={-shadowHalf}
         shadow-camera-near={1}
         shadow-camera-far={35}
         shadow-bias={-0.0004}
@@ -173,7 +177,7 @@ export function BoardCanvas({ board, game = null, variant }: SceneProps) {
       {game && interactive && <Hotspots game={game} />}
       {game && interactive && <Dice3D lastDice={game.dice} />}
       {interactive && <HexTooltip board={board} />}
-      <Controls variant={variant} />
+      <Controls variant={variant} board={board} />
       {interactive && <DevProbe board={board} />}
     </Canvas>
   );
