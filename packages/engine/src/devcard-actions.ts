@@ -10,7 +10,7 @@ import type { GameState } from './types';
 const CARD_NAME: Record<DevCardType, string> = {
   knight: 'Knight',
   roadBuilding: 'Road Building',
-  yearOfPlenty: 'Invention',
+  yearOfPlenty: 'Year of Plenty',
   monopoly: 'Monopoly',
   victoryPoint: 'Victory Point',
 };

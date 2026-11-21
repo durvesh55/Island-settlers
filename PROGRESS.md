@@ -96,14 +96,14 @@ Not built yet: a turn timer, and replacing a player who never comes back with a 
 ## Extension — 5–6 players (CATAN 5-6 rulebook, 2025) ✅
 
 Audited against the 6th-edition rulebooks CN3081 (base) and CN3082 (5-6). The base rules already matched; wording now
-follows the 2025 books (wheat, supply, Invention, Longest Route).
+follows the 2025 books (wheat, supply, Longest Route).
 
 | Feature | Status | Notes |
 | --- | --- | --- |
 | 3–6 players everywhere (local setup, online lobby/server, AI seats), 6 colors | ✅ | `MAX_PLAYERS = 6`; orange and purple added |
 | 30-hex island: rows 3-4-5-6-5-4-3; 6 forest / 5 hills / 5 mountains / 6 fields / 6 pasture / 2 desert | ✅ | `board.ts`, `BOARD_RULES.large` in `constants.ts` |
 | 28 number discs (no 7, 6/8 never adjacent), 11 harbors (6× 3:1 + one 2:1 per resource) | ✅ | tested over several seeds |
-| Supply of 24 cards per resource; 34 development cards (20 Knights, 5 VP, 3 each Road Building / Invention / Monopoly) | ✅ | |
+| Supply of 24 cards per resource; 34 development cards (20 Knights, 5 VP, 3 each Road Building / Year of Plenty / Monopoly) | ✅ | |
 | Paired players: after Player 1's turn, the third player to the left takes an extra Action phase | ✅ | `endTurn` in `actions.ts`; `turnLeader`, `pairedTurn` on `GameState` |
 | Player 2: no dice roll, no trading with players (supply is fine), may build, buy and play one card; wins at 10 VP | ✅ | `trade-actions.ts`; Player 1 / 2 markers shown on the player panels |
 | Computer players handle paired turns (never offer player trades as Player 2) | ✅ | 4 full AI games at 5 and 6 players in `large.test.ts` |

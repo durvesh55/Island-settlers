@@ -33,18 +33,66 @@ function isHighNumber(n: number | null): boolean {
   return n === 6 || n === 8;
 }
 
-/** Assign tokens so that no two red numbers (6/8) are adjacent. */
+/** Precompute which hex indices touch each other. */
+function neighbourIndex(hexes: { q: number; r: number }[]): number[][] {
+  return hexes.map((a, i) => hexes.flatMap((b, j) => (i !== j && axialDistance(a, b) === 1 ? [j] : [])));
+}
+
+/**
+ * Lay out terrains so that no two hexes of the same resource touch (like the "Same Resource Can Touch" option
+ * being off on catan.bunge.io). Falls back to a plain shuffle if no such layout turns up.
+ */
+function shuffleTerrains(size: BoardSize, coords: Axial[], rng: Rng): Terrain[] {
+  const pool = expandTerrains(size);
+  const near = neighbourIndex(coords);
+  // Fill hex by hex from the remaining pool, skipping any terrain an already-placed neighbour has; restart on dead ends.
+  for (let attempt = 0; attempt < 5000; attempt++) {
+    const left = [...pool];
+    const out: Terrain[] = [];
+    let ok = true;
+    for (let i = 0; i < coords.length && ok; i++) {
+      const options = left.filter((t) => t === 'desert' || near[i].every((j) => out[j] !== t));
+      if (options.length === 0) {
+        ok = false;
+        break;
+      }
+      const pick = options[rng.int(options.length)];
+      left.splice(left.indexOf(pick), 1);
+      out.push(pick);
+    }
+    if (ok) return out;
+  }
+  return rng.shuffle(pool);
+}
+
+/**
+ * Assign tokens so that 6/8 never touch, 2/12 never touch and equal numbers never touch (the rules
+ * catan.bunge.io applies by default). If a board is too crowded for that, relax to "no touching 6/8".
+ */
 function assignTokens(hexes: HexTile[], rng: Rng, tokenPool: readonly number[]): void {
   const productive = hexes.filter((h) => h.terrain !== 'desert');
-  for (let attempt = 0; attempt < 20000; attempt++) {
-    const tokens = rng.shuffle(tokenPool);
-    productive.forEach((h, i) => (h.token = tokens[i]));
-    const valid = productive.every(
-      (a) =>
-        !isHighNumber(a.token) ||
-        productive.every((b) => a === b || axialDistance(a, b) !== 1 || !isHighNumber(b.token)),
-    );
-    if (valid) return;
+  const near = neighbourIndex(productive);
+  const conflict = (x: number, y: number, strict: boolean): boolean => {
+    if (isHighNumber(x) && isHighNumber(y)) return true;
+    if (!strict) return false;
+    return x === y || (x + y === 14 && (x === 2 || x === 12));
+  };
+  for (const strict of [true, false]) {
+    for (let attempt = 0; attempt < 5000; attempt++) {
+      const left = [...tokenPool];
+      const out: number[] = [];
+      for (let i = 0; i < productive.length; i++) {
+        const options = left.filter((t) => near[i].every((j) => j >= i || !conflict(t, out[j], strict)));
+        if (options.length === 0) break;
+        const pick = options[rng.int(options.length)];
+        left.splice(left.indexOf(pick), 1);
+        out.push(pick);
+      }
+      if (out.length === productive.length) {
+        productive.forEach((h, i) => (h.token = out[i]));
+        return;
+      }
+    }
   }
   throw new Error('Unable to place number tokens');
 }
@@ -157,7 +205,7 @@ function placeHarbors(hexes: HexTile[], edges: Edge[], vertices: Vertex[], rng: 
 export function generateBoard(seed: number, size: BoardSize = 'standard'): Board {
   const rng = new Rng(seed);
   const { coords, shiftX } = layout(size);
-  const terrains = rng.shuffle(expandTerrains(size));
+  const terrains = shuffleTerrains(size, coords, rng);
 
   const hexes: HexTile[] = coords.map((c, id) => {
     const p = axialToPixel(c);

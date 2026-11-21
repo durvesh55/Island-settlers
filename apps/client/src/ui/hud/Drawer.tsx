@@ -54,6 +54,7 @@ function GamePanel({ game }: { game: GameState }) {
   const resetCamera = useGameStore((s) => s.resetCamera);
   const newIsland = useGameStore((s) => s.newIsland);
   const quitToMenu = useGameStore((s) => s.quitToMenu);
+  const exitGame = useGameStore((s) => s.exitGame);
   const phaseLabel = game.phase === 'setup' ? `Setup (placement ${game.setup!.index + 1} of ${game.setup!.order.length})` : PHASE_LABEL[game.phase];
   return (
     <>
@@ -97,6 +98,14 @@ function GamePanel({ game }: { game: GameState }) {
           </button>
           <button className="btn-wood text-sm" onClick={quitToMenu}>
             Main menu
+          </button>
+          <button
+            className="btn-wood text-sm"
+            onClick={() => {
+              if (window.confirm('Exit the game?')) exitGame();
+            }}
+          >
+            Exit game
           </button>
         </div>
         <p className="mt-2 text-xs text-parchment-300/70">Your game is saved automatically on this device. Drag to orbit, scroll to zoom, right-drag to pan.</p>

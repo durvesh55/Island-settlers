@@ -259,6 +259,7 @@ function Confetti() {
 function WinnerScreen({ game }: { game: GameState }) {
   const newIsland = useGameStore((s) => s.newIsland);
   const quitToMenu = useGameStore((s) => s.quitToMenu);
+  const exitGame = useGameStore((s) => s.exitGame);
   const winner = game.players[game.winner!];
   const pal = PLAYER_PALETTE[winner.color];
   const rows = game.players
@@ -318,6 +319,9 @@ function WinnerScreen({ game }: { game: GameState }) {
           </button>
           <button className="btn-wood" onClick={quitToMenu}>
             Main menu
+          </button>
+          <button className="btn-wood" onClick={exitGame}>
+            Exit game
           </button>
         </div>
       </motion.div>

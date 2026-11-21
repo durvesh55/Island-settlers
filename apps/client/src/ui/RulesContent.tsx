@@ -61,7 +61,7 @@ export function RulesContent() {
       <H>5–6 players: the extension</H>
       <p>
         With 5 or 6 settlers the game uses the <b>CATAN 5-6 extension</b>: a bigger island of <b>30 hexes</b> (6 forests, 5 hills, 5 mountains, 6 fields, 6 pastures and 2 deserts) with 28 number discs and 11 harbors, a supply of <b>24 cards</b> of each
-        resource, and <b>34 development cards</b> (20 Knights, 5 Victory Points, and 3 each of Road Building, Invention and Monopoly). Players still have 15 roads, 5 settlements and 4 cities, and the setup is the usual snake order.
+        resource, and <b>34 development cards</b> (20 Knights, 5 Victory Points, and 3 each of Road Building, Year of Plenty and Monopoly). Players still have 15 roads, 5 settlements and 4 cities, and the setup is the usual snake order.
       </p>
       <p>
         <b>Paired players.</b> A round is: Player 1 takes a normal turn (production, then Action phase). When they finish, <b>Player 2</b> — the third player to their left — takes an extra <b>Action phase</b>: no dice roll, no

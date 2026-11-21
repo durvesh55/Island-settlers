@@ -116,6 +116,7 @@ interface StoreState {
   startGame: (players: PlayerConfig[], seed?: number) => void;
   newIsland: () => void;
   quitToMenu: () => void;
+  exitGame: () => void;
   resumeSavedGame: () => boolean;
   dispatch: (action: GameAction) => boolean;
   rollDice: () => void;
@@ -504,6 +505,13 @@ export const useGameStore = create<StoreState>((set, get) => {
         set({ online: null, game: null, mode: null, rolling: false });
       }
       set({ screen: 'menu', panel: null, settingsOpen: false, hoveredHex: null, buildMode: null });
+    },
+
+    exitGame: () => {
+      get().quitToMenu();
+      // browsers only allow close() on script-opened tabs; otherwise leave the page
+      window.close();
+      window.setTimeout(() => window.location.replace('about:blank'), 150);
     },
 
     resumeSavedGame: () => {
