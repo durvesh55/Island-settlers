@@ -1,4 +1,5 @@
 import type { GameState } from '@island/engine';
+import { viewerId } from '../../lib/viewer';
 import { DevHand } from './DevCards';
 
 function CardBack({ count }: { count: number }) {
@@ -32,7 +33,13 @@ export function DevCardsPanel({ game }: { game: GameState }) {
   return (
     <div className="panel-wood p-3">
       <div className="mb-2 flex items-center justify-between font-display text-lg text-parchment-100">
-        Development Cards
+        <span>
+          Development Cards
+          <span className="ml-2 font-body text-xs text-parchment-300/80">
+            — {game.players[viewerId(game)].name}
+            {viewerId(game) !== game.currentPlayer ? "'s hand (not the active player)" : ''}
+          </span>
+        </span>
         {game.devCardPlayedThisTurn && <span className="font-body text-xs text-parchment-300/70">card played this turn</span>}
       </div>
       <div className="flex items-end gap-3">
