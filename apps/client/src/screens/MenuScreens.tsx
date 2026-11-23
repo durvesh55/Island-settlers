@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { generateBoard, randomSeed } from '@island/engine';
 import { playSound } from '../lib/sound';
-import { hasSavedGame, savedOnlineRoom, useGameStore, type GameMode } from '../store/useGameStore';
+import { hasSavedGame, savedOnlineRoom, useGameStore, verifySavedOnlineRoom, type GameMode } from '../store/useGameStore';
 import { BoardCanvas } from '../three/BoardScene';
 import { BackIcon, BookIcon, GearIcon, PlayIcon, UsersIcon } from '../ui/icons';
 import { Logo } from '../ui/Logo';
@@ -31,7 +31,12 @@ export function MainMenu() {
   const resume = useGameStore((s) => s.resumeSavedGame);
   const setSettingsOpen = useGameStore((s) => s.setSettingsOpen);
   const canResume = hasSavedGame();
-  const onlineRoom = savedOnlineRoom();
+  // read once, then refreshed after a failed rejoin (the saved room is cleared when the server no longer has it)
+  const [onlineRoom, setOnlineRoom] = useState(savedOnlineRoom);
+  useEffect(() => {
+    if (onlineRoom) void verifySavedOnlineRoom().then(setOnlineRoom);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const rejoin = useGameStore((s) => s.rejoinRoom);
   const go = (fn: () => void) => () => {
     playSound('click');
@@ -52,7 +57,7 @@ export function MainMenu() {
           </button>
         )}
         {onlineRoom && (
-          <button className="btn-wood py-3 text-lg" onClick={go(() => void rejoin())}>
+          <button className="btn-wood py-3 text-lg" onClick={go(() => void rejoin().then(() => setOnlineRoom(savedOnlineRoom())))}>
             <UsersIcon width={20} height={20} /> Rejoin room {onlineRoom.code}
           </button>
         )}

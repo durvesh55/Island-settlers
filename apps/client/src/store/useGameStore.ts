@@ -165,6 +165,25 @@ export function savedOnlineRoom(): { code: string; token: string } | null {
   return load<{ code: string; token: string }>(ONLINE_KEY);
 }
 
+/** Ask the server whether the saved room still exists; forget it if not. Keeps it if the server can't be reached. */
+export async function verifySavedOnlineRoom(): Promise<{ code: string; token: string } | null> {
+  const saved = savedOnlineRoom();
+  if (!saved) return null;
+  try {
+    const base = (import.meta.env.VITE_SERVER_URL as string | undefined) ?? '';
+    const res = await fetch(`${base}/api/rooms/${encodeURIComponent(saved.code)}`);
+    if (!res.ok) return saved;
+    const body = (await res.json()) as { exists?: boolean };
+    if (body.exists === false) {
+      save(ONLINE_KEY, null);
+      return null;
+    }
+  } catch {
+    // offline / no game server: leave it alone
+  }
+  return saved;
+}
+
 export function hasSavedGame(): boolean {
   const saved = load<SavedGame>(GAME_KEY);
   return !!saved && saved.game?.version === SAVE_VERSION && saved.game.phase !== 'gameOver';

@@ -47,6 +47,14 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, store: store.kind, rooms: rooms.rooms.size });
   });
+  // Lets a returning browser check whether its saved room still exists before offering "Rejoin".
+  app.get('/api/rooms/:code', async (req, res) => {
+    try {
+      res.json({ exists: !!(await rooms.get(req.params.code)) });
+    } catch {
+      res.status(500).json({ error: 'Could not look up the room' });
+    }
+  });
   app.get('/api/matches', async (_req, res) => {
     try {
       res.json(await store.recentMatches(20));
