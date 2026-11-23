@@ -34,16 +34,23 @@ export interface AIMemory {
   trades: number;
   /** Player-to-player offers this turn. */
   offers: number;
+  /** Offers already made this turn (give→want), so the same one is never repeated. */
+  offered: string[];
 }
 
-export const newAIMemory = (): AIMemory => ({ turn: -1, steps: 0, trades: 0, offers: 0 });
+const offerKey = (give: Partial<ResourceBundle>, want: Partial<ResourceBundle>) => JSON.stringify([give, want]);
+
+export const newAIMemory = (): AIMemory => ({ turn: -1, steps: 0, trades: 0, offers: 0, offered: [] });
 
 /** Update the memory after the caller has successfully applied `action` to `state`. */
 export function recordAIAction(memory: AIMemory, state: GameState, action: GameAction): void {
   if (memory.turn !== state.turn) Object.assign(memory, newAIMemory(), { turn: state.turn });
   memory.steps++;
   if (action.type === 'MARITIME_TRADE') memory.trades++;
-  if (action.type === 'PROPOSE_TRADE') memory.offers++;
+  if (action.type === 'PROPOSE_TRADE') {
+    memory.offers++;
+    memory.offered.push(offerKey(action.give, action.want));
+  }
 }
 
 const MAX_STEPS_PER_TURN = 40;
@@ -406,7 +413,7 @@ function maritimeFor(ctx: Ctx, goal: Goal): GameAction | null {
   return give ? { type: 'MARITIME_TRADE', player, give, receive, amount: 1 } : null;
 }
 
-function domesticOffer(ctx: Ctx, goal: Goal): GameAction | null {
+function domesticOffer(ctx: Ctx, goal: Goal, offered: string[]): GameAction | null {
   const { state, player } = ctx;
   if (state.pairedTurn) return null; // Player 2 may not trade with other players
   if (totalCards(goal.missing) > 2) return null;
@@ -421,7 +428,10 @@ function domesticOffer(ctx: Ctx, goal: Goal): GameAction | null {
     (r) => have[r] - (need[r] ?? 0) - WORTH[r] * 0.1,
   );
   if (!receive || !give) return null;
-  return { type: 'PROPOSE_TRADE', player, give: { [give]: 1 }, want: { [receive]: 1 } };
+  const give1 = { [give]: 1 };
+  const want1 = { [receive]: 1 };
+  if (offered.includes(offerKey(give1, want1))) return null; // already asked this turn
+  return { type: 'PROPOSE_TRADE', player, give: give1, want: want1 };
 }
 
 /** As the offerer: once everyone has answered, trade with the best accepting partner or withdraw. */
@@ -520,7 +530,7 @@ function mainAction(ctx: Ctx, memo: AIMemory): GameAction {
         if (trade) return trade;
       }
       if (ctx.level !== 'easy' && memo.offers < MAX_OFFERS_PER_TURN) {
-        const offer = domesticOffer(ctx, goal);
+        const offer = domesticOffer(ctx, goal, memo.offered);
         if (offer) return offer;
       }
     }
