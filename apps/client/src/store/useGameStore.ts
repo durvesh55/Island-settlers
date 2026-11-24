@@ -345,16 +345,19 @@ export const useGameStore = create<StoreState>((set, get) => {
     return socket;
   };
 
-  const enterRoom = (code: string, seat: number, token: string) => {
+  /** `keepGame`: the server already pushed the running game while we were joining — don't throw it away. */
+  const enterRoom = (code: string, seat: number, token: string, keepGame = false) => {
     window.clearTimeout(rollTimer);
-    updateQueue = [];
-    lastSeq = -1;
+    if (!keepGame) {
+      updateQueue = [];
+      lastSeq = -1;
+    }
     save(ONLINE_KEY, { code, token });
     set((st) => ({
       mode: 'online',
       online: { code, seat, token, lobby: st.online?.code === code ? st.online.lobby : null, connection: 'connected' },
-      screen: 'lobby',
-      game: null,
+      screen: keepGame && st.game ? 'game' : 'lobby',
+      game: keepGame ? st.game : null,
       rolling: false,
       diceThrow: null,
       handoffFor: null,
@@ -402,9 +405,18 @@ export const useGameStore = create<StoreState>((set, get) => {
       if (!saved) return false;
       const online = get().online;
       if (online) set({ online: { ...online, connection: 'connecting' } });
+      else {
+        // coming from the main menu: the server pushes the running game before it acks,
+        // so be in online mode already or that update would be dropped
+        window.clearTimeout(rollTimer);
+        updateQueue = [];
+        lastSeq = -1;
+        set({ mode: 'online', game: null, rolling: false });
+      }
       const res = await request<Joined>('room:join', { code: saved.code, token: saved.token });
       if (!res.ok) {
         if (online) set({ online: { ...online, connection: 'offline' } });
+        if (!online) set({ mode: null });
         if (!online || /No room|started/.test(res.error)) save(ONLINE_KEY, null);
         get().pushToast(res.error, 'error');
         return false;
@@ -414,7 +426,7 @@ export const useGameStore = create<StoreState>((set, get) => {
         lastSeq = -1;
         set({ online: { ...online, seat: res.seat, connection: 'connected' } });
       } else {
-        enterRoom(res.code, res.seat, res.token);
+        enterRoom(res.code, res.seat, res.token, !online);
       }
       return true;
     },
